@@ -152,33 +152,61 @@ export default function Home() {
   }, [userLibraryKey, userActiveIdKey]);
 
 
+  const clearWorkspaceState = () => {
+    setLibrary([]);
+    setActiveId("");
+    setFileName("");
+    setSummary("");
+    setDocumentText("");
+    setQuestion("");
+    setAnswer("");
+    setStreamingText("");
+    setActiveTab("chat");
+    setTabContent("");
+    setTranslatedTabContent("");
+    setQuizData([]);
+    setQuizAnswers({});
+    setQuizScore(null);
+    setCurrentQ(0);
+    setUrlInput("");
+    setPastedText("");
+  };
+  
+  const syncAuthState = async (session: any) => {
+    const nextUser = session?.user ?? null;
+    setUser(nextUser);
+  
+    if (!nextUser) {
+      setProfile(null);
+      clearWorkspaceState();
+      return;
+    }
+  
+    await supabase.from("profiles").upsert({
+      id: nextUser.id,
+      email: nextUser.email,
+    });
+  
+    const { data: profileData } = await supabase
+      .from("profiles")
+      .select("email, tier, full_name")
+      .eq("id", nextUser.id)
+      .single();
+  
+    setProfile(profileData || null);
+  };
+
+
   useEffect(() => {
+    let mounted = true;
+  
     const loadSession = async () => {
       const {
         data: { session },
       } = await supabase.auth.getSession();
   
-      setUser(session?.user ?? null);
-
-
-      if (session?.user) {
-        await supabase.from("profiles").upsert({
-          id: session.user.id,
-          email: session.user.email,
-        });
-      
-        const { data: profileData } = await supabase
-          .from("profiles")
-          .select("email, tier, full_name")
-          .eq("id", session.user.id)
-          .single();
-      
-        setProfile(profileData || null);
-      } else {
-        setProfile(null);
-      }  
-
-
+      if (!mounted) return;
+      await syncAuthState(session);
     };
   
     loadSession();
@@ -186,30 +214,16 @@ export default function Home() {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setUser(session?.user ?? null);
-  
-
-      if (session?.user) {
-        await supabase.from("profiles").upsert({
-          id: session.user.id,
-          email: session.user.email,
-        });
-      
-        const { data: profileData } = await supabase
-          .from("profiles")
-          .select("email, tier, full_name")
-          .eq("id", session.user.id)
-          .single();
-      
-        setProfile(profileData || null);
-      } else {
-        setProfile(null);
-      }
-
+      if (!mounted) return;
+      await syncAuthState(session);
     });
   
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
+
 
 
 
@@ -238,21 +252,14 @@ export default function Home() {
 
       for (const item of items) {
         if (item.type.includes("image")) {
-          if (activeId) {
-            alert("You are already inside a document. Click New Chat before using screenshot.");
-            return;
-          }
+
+          resetCurrentDocumentView();
 
           const blob = item.getAsFile();
           if (!blob) continue;
 
 
-          if (!user) {
-            setAuthMessage("Please sign in to upload and use your daily free limit.");
-            setAuthMode("signin");
-            setShowAuthModal(true);
-            return;
-          }
+          if (!(await requireSignedIn())) return;
           
           const usage = await checkAndConsumeUpload("screenshot", "Screenshot");
           if (!usage.allowed) {
@@ -350,21 +357,36 @@ export default function Home() {
   };
 
 
-  const requireSignedIn = () => {
+  const requireSignedIn = async () => {
     if (user) return true;
+  
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+  
+    if (session?.user) {
+      setUser(session.user);
+      return true;
+    }
+  
     setAuthMessage("Please sign in to upload and use your daily free limit.");
     setAuthMode("signin");
     setShowAuthModal(true);
     return false;
   };
-  
 
 
   const checkAndConsumeUpload = async (
     sourceType: "file" | "url" | "pasted_text" | "camera" | "screenshot",
     fileName?: string
   ) => {
-    if (!user) {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+  
+    const currentUser = session?.user ?? user;
+  
+    if (!currentUser) {
       return {
         allowed: false,
         message: "Please sign in first.",
@@ -376,7 +398,7 @@ export default function Home() {
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
       .select("tier")
-      .eq("id", user.id)
+      .eq("id", currentUser.id)
       .single();
   
     if (profileError) {
@@ -385,17 +407,23 @@ export default function Home() {
         message: "Could not load your plan. Please try again.",
       };
     }
-
-
+  
     const tier = profile?.tier || "free";
     const dailyLimit = tier === "free" ? 5 : tier === "premium" ? 10 : 50;
   
-    const { data: existing } = await supabase
+    const { data: existing, error: existingError } = await supabase
       .from("daily_usage")
       .select("id, upload_count")
-      .eq("user_id", user.id)
+      .eq("user_id", currentUser.id)
       .eq("usage_date", today)
       .maybeSingle();
+  
+    if (existingError) {
+      return {
+        allowed: false,
+        message: "Could not load usage. Please try again.",
+      };
+    }
   
     const currentCount = existing?.upload_count || 0;
   
@@ -420,7 +448,7 @@ export default function Home() {
       }
     } else {
       const { error } = await supabase.from("daily_usage").insert({
-        user_id: user.id,
+        user_id: currentUser.id,
         usage_date: today,
         upload_count: 1,
       });
@@ -434,7 +462,7 @@ export default function Home() {
     }
   
     await supabase.from("uploads").insert({
-      user_id: user.id,
+      user_id: currentUser.id,
       file_name: fileName || null,
       source_type: sourceType,
     });
@@ -443,8 +471,15 @@ export default function Home() {
   };
 
 
+
   const checkAndConsumeChat = async () => {
-    if (!user) {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+  
+    const currentUser = session?.user ?? user;
+  
+    if (!currentUser) {
       return {
         allowed: false,
         message: "Please sign in first.",
@@ -456,26 +491,32 @@ export default function Home() {
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
       .select("tier")
-      .eq("id", user.id)
+      .eq("id", currentUser.id)
       .single();
-
+  
     if (profileError) {
       return {
         allowed: false,
         message: "Could not load your plan. Please try again.",
       };
     }
-
   
     const tier = profile?.tier || "free";
     const dailyLimit = tier === "free" ? 15 : tier === "premium" ? 100 : 500;
   
-    const { data: existing } = await supabase
+    const { data: existing, error: existingError } = await supabase
       .from("daily_chat_usage")
       .select("id, chat_count")
-      .eq("user_id", user.id)
+      .eq("user_id", currentUser.id)
       .eq("usage_date", today)
       .maybeSingle();
+  
+    if (existingError) {
+      return {
+        allowed: false,
+        message: "Could not load chat usage. Please try again.",
+      };
+    }
   
     const currentCount = existing?.chat_count || 0;
   
@@ -500,7 +541,7 @@ export default function Home() {
       }
     } else {
       const { error } = await supabase.from("daily_chat_usage").insert({
-        user_id: user.id,
+        user_id: currentUser.id,
         usage_date: today,
         chat_count: 1,
       });
@@ -518,51 +559,74 @@ export default function Home() {
 
 
 
+  const resetCurrentDocumentView = () => {
+    setActiveId("");
+    setFileName("");
+    setSummary("");
+    setDocumentText("");
+    setQuestion("");
+    setAnswer("");
+    setStreamingText("");
+    setActiveTab("chat");
+    setTabContent("");
+    setTranslatedTabContent("");
+    setQuizData([]);
+    setQuizAnswers({});
+    setQuizScore(null);
+    setCurrentQ(0);
+    setUrlInput("");
+    setPastedText("");
+  
+    if (userActiveIdKey) {
+      localStorage.removeItem(userActiveIdKey);
+    }
+  };
+
+
+
+
 
   const handleUploadButtonClick = async () => {
-    if (!requireSignedIn()) return;
+    if (!(await requireSignedIn())) return;
   
-    if (activeId) {
-      alert("Click New Chat before uploading another file.");
-      return;
-    }
-  
+    resetCurrentDocumentView();
     document.getElementById("fileUpload")?.click();
   };
 
 
   const handleFileUpload = async (e: any) => {
     try {
-      if (preventNewSourceWhileInDoc()) return;
-
-      const usage = await checkAndConsumeUpload("file", e.target.files?.[0]?.name);
+      if (!(await requireSignedIn())) return;
+  
+      const file = e.target.files?.[0];
+      if (!file) return;
+  
+      resetCurrentDocumentView();
+  
+      const usage = await checkAndConsumeUpload("file", file.name);
       if (!usage.allowed) {
         alert(usage.message);
         return;
       }
-
-
-      const file = e.target.files?.[0];
-      if (!file) return;
-
+  
       setIsUploading(true);
-
+  
       const formData = new FormData();
       formData.append("file", file);
-
+  
       const res = await fetch(`${API}/summarize`, {
         method: "POST",
         body: formData,
       });
-
+  
       if (!res.ok) throw new Error("Upload failed");
-
+  
       const data = await res.json();
-
+  
       setFileName(data.filename);
       setDocumentText(data.document_text);
       setSummary(data.summary);
-
+  
       const newItem: LibraryItem = {
         id: crypto.randomUUID(),
         name: data.filename,
@@ -578,29 +642,33 @@ export default function Home() {
           },
         ],
       };
-
+  
       setLibrary((prev) => [newItem, ...prev]);
       setActiveId(newItem.id);
-
       setQuestion("");
       setStreamingText("");
-
     } catch (err) {
       console.error(err);
       alert("Upload failed");
     } finally {
       setIsUploading(false);
+      if (e?.target) {
+        e.target.value = "";
+      }
     }
   };
 
 
+
+
   const handleUrlAnalyze = async (incomingUrl?: string) => {
     try {
-      if (!requireSignedIn()) return;
-      if (preventNewSourceWhileInDoc()) return;
+      if (!(await requireSignedIn())) return;
   
-      const finalUrl = (incomingUrl || urlInput).trim();
+      const finalUrl = (incomingUrl ?? urlInput).trim();
       if (!finalUrl) return;
+  
+      resetCurrentDocumentView();
   
       const usage = await checkAndConsumeUpload("url", finalUrl);
       if (!usage.allowed) {
@@ -616,8 +684,7 @@ export default function Home() {
   
       let endpoint = "";
       let type: LibraryItem["type"] = "WEB";
-
-
+  
       if (finalUrl.includes("youtube.com") || finalUrl.includes("youtu.be")) {
         formData.append("video_url", finalUrl);
         endpoint = `${API}/summarize-video`;
@@ -627,32 +694,29 @@ export default function Home() {
         endpoint = `${API}/summarize-website`;
         type = "WEB";
       }
-
-      console.log("Calling URL endpoint:", endpoint, "finalUrl:", finalUrl);
-
+  
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 15000);
-
+  
       const res = await fetch(endpoint, {
         method: "POST",
         body: formData,
         signal: controller.signal,
       });
-
+  
       clearTimeout(timeoutId);
-
+  
       if (!res.ok) {
         const errorText = await res.text();
         throw new Error(errorText);
       }
-
+  
       const data = await res.json();
-      console.log("URL API response:", data);
-
+  
       if (!data || (!data.summary && !data.document_text && !data.text && !data.transcript && !data.content)) {
         throw new Error("Empty URL response");
       }
-
+  
       const safeSummary =
         data.summary ||
         data.document_text ||
@@ -660,18 +724,18 @@ export default function Home() {
         data.transcript ||
         data.content ||
         "No summary available";
-
+  
       const safeText =
         data.document_text ||
         data.text ||
         data.transcript ||
         data.content ||
         "";
-
+  
       setSummary(safeSummary);
       setFileName(data.filename || finalUrl);
       setDocumentText(safeText);
-
+  
       const newItem: LibraryItem = {
         id: crypto.randomUUID(),
         name: finalUrl,
@@ -687,7 +751,7 @@ export default function Home() {
           },
         ],
       };
-
+  
       setLibrary((prev) => [newItem, ...prev]);
       setActiveId(newItem.id);
       setActiveTab("chat");
@@ -703,17 +767,15 @@ export default function Home() {
       setAnswer("");
       setStreamingText("");
       setUrlInput("");
-
-      console.log("URL item created:", newItem);
     } catch (err: any) {
       console.error("handleUrlAnalyze failed:", err);
-
+  
       if (err?.name === "AbortError") {
         setSummary("URL request timed out. Backend URL analysis is hanging.");
       } else {
         setSummary("URL analysis failed. Check backend terminal.");
       }
-
+  
       setQuestion("");
       setAnswer("");
       setStreamingText("");
@@ -724,11 +786,12 @@ export default function Home() {
 
 
   const handlePasteAnalyze = async (inputText?: string) => {
-    if (!requireSignedIn()) return;
-    if (preventNewSourceWhileInDoc()) return;
+    if (!(await requireSignedIn())) return;
   
     const text = inputText || pastedText;
     if (!text.trim()) return;
+  
+    resetCurrentDocumentView();
   
     const usage = await checkAndConsumeUpload("pasted_text", "Pasted Text");
     if (!usage.allowed) {
@@ -738,17 +801,17 @@ export default function Home() {
   
     try {
       setIsUploading(true);
-
+  
       const formData = new FormData();
       formData.append("text", text);
-
+  
       const res = await fetch(`${API}/summarize-text`, {
         method: "POST",
         body: formData,
       });
-
+  
       const data = await res.json();
-
+  
       const newItem: LibraryItem = {
         id: crypto.randomUUID(),
         name: "Pasted Text",
@@ -764,12 +827,10 @@ export default function Home() {
           },
         ],
       };
-
-      setLibrary(prev => [newItem, ...prev]);
+  
+      setLibrary((prev) => [newItem, ...prev]);
       setActiveId(newItem.id);
-
       setPastedText("");
-
     } catch (err) {
       console.error(err);
     } finally {
@@ -780,47 +841,46 @@ export default function Home() {
 
   const handleCameraUpload = async (e: any) => {
     try {
-      if (!requireSignedIn()) return;
-      if (preventNewSourceWhileInDoc()) return;
+      if (!(await requireSignedIn())) return;
   
-      const usage = await checkAndConsumeUpload(
-        "camera",
-        e.target.files?.[0]?.name || "Captured Image"
-      );
+      const file = e.target.files?.[0];
+      if (!file) return;
+  
+      resetCurrentDocumentView();
+  
+      const usage = await checkAndConsumeUpload("camera", file.name || "Captured Image");
       if (!usage.allowed) {
         alert(usage.message);
         return;
       }
-
-      const file = e.target.files?.[0];
-      if (!file) return;
-
+  
       setIsUploading(true);
-
+  
       const formData = new FormData();
       formData.append("file", file);
-
+  
       const res = await fetch(`${API}/ocr`, {
         method: "POST",
         body: formData,
       });
-
+  
       if (!res.ok) {
         const errorText = await res.text();
         throw new Error(errorText);
       }
+  
       const data = await res.json();
-
+  
       const safeSummary =
         data.summary || data.document_text || data.text || "No readable text found. Try clearer image.";
-
+  
       const safeText =
         data.document_text || data.text || "No text found";
-
+  
       setSummary(safeSummary);
       setFileName("Captured Image");
       setDocumentText(safeText);
-
+  
       const newItem: LibraryItem = {
         id: crypto.randomUUID(),
         name: "Captured Image",
@@ -836,20 +896,24 @@ export default function Home() {
           },
         ],
       };
-
+  
       setLibrary((prev) => [newItem, ...prev]);
       setActiveId(newItem.id);
       setQuestion("");
       setAnswer("");
       setStreamingText("");
-
     } catch (err) {
       console.error(err);
       alert("Image processing failed");
     } finally {
       setIsUploading(false);
+      if (e?.target) {
+        e.target.value = "";
+      }
     }
   };
+
+
 
   const handleStopAnswer = () => {
     if (askIntervalRef.current) {
@@ -867,7 +931,7 @@ export default function Home() {
 
       if (!question.trim() || isAsking) return;
 
-      if (!requireSignedIn()) return;
+      if (!(await requireSignedIn())) return;
       
       const chatUsage = await checkAndConsumeChat();
       if (!chatUsage.allowed) {
@@ -1570,8 +1634,15 @@ export default function Home() {
     setQuizAnswers({});
     setQuizScore(null);
     setCurrentQ(0);
+    setUrlInput("");
+    setPastedText("");
     setShowSidebar(false);
+  
+    if (userActiveIdKey) {
+      localStorage.removeItem(userActiveIdKey);
+    }
   };
+
 
   const activeItem = library.find(i => i.id === activeId);
 
@@ -1593,6 +1664,34 @@ export default function Home() {
   };
 
 
+  const handleForgotPassword = async () => {
+    if (!authEmail.trim()) {
+      setAuthMessage("Please enter your email address first.");
+      return;
+    }
+  
+    setIsAuthLoading(true);
+    setAuthMessage("");
+  
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(authEmail, {
+        redirectTo:
+          window.location.hostname === "localhost"
+            ? "http://localhost:3000/update-password"
+            : "https://examlift.insightxai.com.au/update-password",
+      });
+  
+      if (error) throw error;
+  
+      setAuthMessage("Password reset email sent. Please check your inbox.");
+    } catch (err: any) {
+      setAuthMessage(err.message || "Could not send password reset email.");
+    } finally {
+      setIsAuthLoading(false);
+    }
+  };
+
+
   const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsAuthLoading(true);
@@ -1608,20 +1707,15 @@ export default function Home() {
         if (error) throw error;
   
         if (data.user) {
-
-
           await supabase.from("profiles").upsert({
             id: data.user.id,
             email: data.user.email,
             full_name: authName,
             tier: "free",
           });
-
         }
   
-        setAuthMessage(
-          "Account created successfully. You can now sign in and start uploading."
-        );
+        setAuthMessage("Account created successfully. Please sign in.");
         setAuthMode("signin");
         return;
       }
@@ -1633,12 +1727,14 @@ export default function Home() {
   
       if (error) throw error;
   
-      setUser(data.user);
+      await syncAuthState(data.session);
+  
       setShowAuthModal(false);
       setAuthEmail("");
       setAuthPassword("");
       setAuthName("");
       setAuthMessage("");
+      setShowSidebar(false);
     } catch (err: any) {
       setAuthMessage(err.message || "Authentication failed.");
     } finally {
@@ -1653,28 +1749,13 @@ export default function Home() {
     }
   
     await supabase.auth.signOut();
-    setUser(null);
-    setLibrary([]);
+  
+    await syncAuthState(null);
+  
     setShowAuthModal(false);
     setAuthMessage("");
-    setActiveId("");
-    setFileName("");
-    setSummary("");
-    setDocumentText("");
-    setQuestion("");
-    setAnswer("");
-    setStreamingText("");
-    setTabContent("");
-    setTranslatedTabContent("");
-    setQuizData([]);
-    setQuizAnswers({});
-    setQuizScore(null);
-    setCurrentQ(0);
-    setActiveTab("chat");
-    setChatLanguage("english");
-    setTabLanguage("english");
+    setShowSidebar(false);
   };
-
 
 
   const tabs = [
@@ -1717,7 +1798,7 @@ export default function Home() {
 
             {/* Modal Body */}
             <div className="p-8">
-              {/* Google Sign In */}
+              {/*
               <button
                 onClick={() => {
                   setIsAuthLoading(true);
@@ -1732,6 +1813,7 @@ export default function Home() {
                 <GoogleIcon />
                 Continue with Google
               </button>
+              */}
 
               {/* Divider */}
               <div className="flex items-center gap-4 my-6">
@@ -1801,6 +1883,19 @@ export default function Home() {
                     </button>
                   </div>
                 </div>
+
+                {authMode === "signin" && (
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      onClick={handleForgotPassword}
+                      className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                    >
+                      Forgot password?
+                    </button>
+                  </div>
+                )}
+
 
                 {authMessage && (
                   <div className="mb-4 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700">
@@ -2151,6 +2246,7 @@ export default function Home() {
                     </div>
 
                     {/* URL Input - Inline */}
+
                     <div className="flex items-center gap-2 mb-4 lg:mb-6">
                       <div className="flex-1 relative">
                         <Link2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -2158,13 +2254,19 @@ export default function Home() {
                           type="text"
                           value={urlInput}
                           onChange={(e) => setUrlInput(e.target.value)}
-                          onKeyDown={(e) => e.key === "Enter" && handleUrlAnalyze()}
-                          placeholder="Paste YouTube or website URL..."
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              handleUrlAnalyze(e.currentTarget.value);
+                            }
+                          }}
+                          placeholder="Paste YouTube or website URL."
                           className="w-full pl-10 pr-4 py-2.5 border-2 border-gray-200 rounded-xl text-sm focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all"
                         />
                       </div>
                       <button
-                        onClick={() => handleUrlAnalyze()}
+                        type="button"
+                        onClick={() => handleUrlAnalyze(urlInput)}
                         disabled={!urlInput.trim()}
                         className="px-4 py-2.5 bg-teal-600 text-white font-medium text-sm rounded-xl hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                       >
