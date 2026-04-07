@@ -1,4 +1,5 @@
 "use client";
+import { supabase } from "@/lib/supabase";
 import { useEffect, useState, useRef, useMemo } from "react";
 import ReactMarkdown from "react-markdown";
 import { 
@@ -96,21 +97,38 @@ export default function Home() {
   const [showPassword, setShowPassword] = useState(false);
   const [isAuthLoading, setIsAuthLoading] = useState(false);
 
+  const [user, setUser] = useState<any>(null);
+  const [authMessage, setAuthMessage] = useState("");
+
+  const [profile, setProfile] = useState<{ email?: string; tier?: string; full_name?: string } | null>(null);
+
+  const userLibraryKey = user?.id ? `examlift_library_${user.id}` : null;
+  const userActiveIdKey = user?.id ? `examlift_active_id_${user.id}` : null;
+
+
+
   // RESTORE LIBRARY ON PAGE LOAD
   useEffect(() => {
     try {
-      const savedLibrary = localStorage.getItem("examlift_library");
-      const savedActiveId = localStorage.getItem("examlift_active_id");
-
-      if (!savedLibrary) return;
-
+      if (!userLibraryKey || !userActiveIdKey) {
+        setLibrary([]);
+        setActiveId("");
+        return;
+      }
+  
+      const savedLibrary = localStorage.getItem(userLibraryKey);
+      const savedActiveId = localStorage.getItem(userActiveIdKey);
+  
+      if (!savedLibrary) {
+        setLibrary([]);
+        setActiveId("");
+        return;
+      }
+  
       const parsed: LibraryItem[] = JSON.parse(savedLibrary);
-
-      if (!parsed.length) return;
-
-      setLibrary(parsed);
-
-      setActiveId("");
+  
+      setLibrary(Array.isArray(parsed) ? parsed : []);
+      setActiveId(savedActiveId || "");
       setFileName("");
       setSummary("");
       setDocumentText("");
@@ -126,23 +144,92 @@ export default function Home() {
       setCurrentQ(0);
       setChatLanguage("english");
       setTabLanguage("english");
-      localStorage.removeItem("examlift_active_id");
-
     } catch (err) {
       console.error("Restore failed", err);
+      setLibrary([]);
+      setActiveId("");
     }
+  }, [userLibraryKey, userActiveIdKey]);
+
+
+  useEffect(() => {
+    const loadSession = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+  
+      setUser(session?.user ?? null);
+
+
+      if (session?.user) {
+        await supabase.from("profiles").upsert({
+          id: session.user.id,
+          email: session.user.email,
+        });
+      
+        const { data: profileData } = await supabase
+          .from("profiles")
+          .select("email, tier, full_name")
+          .eq("id", session.user.id)
+          .single();
+      
+        setProfile(profileData || null);
+      } else {
+        setProfile(null);
+      }  
+
+
+    };
+  
+    loadSession();
+  
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      setUser(session?.user ?? null);
+  
+
+      if (session?.user) {
+        await supabase.from("profiles").upsert({
+          id: session.user.id,
+          email: session.user.email,
+        });
+      
+        const { data: profileData } = await supabase
+          .from("profiles")
+          .select("email, tier, full_name")
+          .eq("id", session.user.id)
+          .single();
+      
+        setProfile(profileData || null);
+      } else {
+        setProfile(null);
+      }
+
+    });
+  
+    return () => subscription.unsubscribe();
   }, []);
+
+
 
   // SAVE LIBRARY WHEN UPDATED
   useEffect(() => {
-    localStorage.setItem("examlift_library", JSON.stringify(library));
-  }, [library]);
+    if (!userLibraryKey) return;
+    localStorage.setItem(userLibraryKey, JSON.stringify(library));
+  }, [library, userLibraryKey]);
+
 
   useEffect(() => {
+    if (!userActiveIdKey) return;
+  
     if (activeId) {
-      localStorage.setItem("examlift_active_id", activeId);
+      localStorage.setItem(userActiveIdKey, activeId);
+    } else {
+      localStorage.removeItem(userActiveIdKey);
     }
-  }, [activeId]);
+  }, [activeId, userActiveIdKey]);
+
 
   useEffect(() => {
     const handlePaste = async (e: ClipboardEvent) => {
@@ -158,6 +245,21 @@ export default function Home() {
 
           const blob = item.getAsFile();
           if (!blob) continue;
+
+
+          if (!user) {
+            setAuthMessage("Please sign in to upload and use your daily free limit.");
+            setAuthMode("signin");
+            setShowAuthModal(true);
+            return;
+          }
+          
+          const usage = await checkAndConsumeUpload("screenshot", "Screenshot");
+          if (!usage.allowed) {
+            alert(usage.message);
+            return;
+          }
+
 
           const formData = new FormData();
           formData.append("file", blob);
@@ -225,7 +327,7 @@ export default function Home() {
 
     window.addEventListener("paste", handlePaste);
     return () => window.removeEventListener("paste", handlePaste);
-  }, [API, activeId]);
+  }, [API, activeId, user]);
 
   const cleanContent = useMemo(() => {
     return (translatedTabContent || tabContent || "").replace(/\n/g, "\n\n");
@@ -247,18 +349,113 @@ export default function Home() {
     return true;
   };
 
-  const handleUploadButtonClick = () => {
+
+
+  const requireSignedIn = () => {
+    if (user) return true;
+    setAuthMessage("Please sign in to upload and use your daily free limit.");
+    setAuthMode("signin");
+    setShowAuthModal(true);
+    return false;
+  };
+  
+  const checkAndConsumeUpload = async (
+    sourceType: "file" | "url" | "pasted_text" | "camera" | "screenshot",
+    fileName?: string
+  ) => {
+    if (!user) {
+      return {
+        allowed: false,
+        message: "Please sign in first.",
+      };
+    }
+  
+    const today = new Date().toISOString().slice(0, 10);
+  
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("tier")
+      .eq("id", user.id)
+      .single();
+  
+    const tier = profile?.tier || "free";
+    const dailyLimit = tier === "free" ? 3 : tier === "premium" ? 10 : 50;
+  
+    const { data: existing } = await supabase
+      .from("daily_usage")
+      .select("id, upload_count")
+      .eq("user_id", user.id)
+      .eq("usage_date", today)
+      .maybeSingle();
+  
+    const currentCount = existing?.upload_count || 0;
+  
+    if (currentCount >= dailyLimit) {
+      return {
+        allowed: false,
+        message: `Daily limit reached. Your ${tier} plan allows ${dailyLimit} uploads per day.`,
+      };
+    }
+  
+    if (existing?.id) {
+      const { error } = await supabase
+        .from("daily_usage")
+        .update({ upload_count: currentCount + 1 })
+        .eq("id", existing.id);
+  
+      if (error) {
+        return {
+          allowed: false,
+          message: "Could not update usage. Please try again.",
+        };
+      }
+    } else {
+      const { error } = await supabase.from("daily_usage").insert({
+        user_id: user.id,
+        usage_date: today,
+        upload_count: 1,
+      });
+  
+      if (error) {
+        return {
+          allowed: false,
+          message: "Could not start usage tracking. Please try again.",
+        };
+      }
+    }
+  
+    await supabase.from("uploads").insert({
+      user_id: user.id,
+      file_name: fileName || null,
+      source_type: sourceType,
+    });
+  
+    return { allowed: true, message: "" };
+  };
+
+
+  const handleUploadButtonClick = async () => {
+    if (!requireSignedIn()) return;
+  
     if (activeId) {
       alert("Click New Chat before uploading another file.");
       return;
     }
-
+  
     document.getElementById("fileUpload")?.click();
   };
+
 
   const handleFileUpload = async (e: any) => {
     try {
       if (preventNewSourceWhileInDoc()) return;
+
+      const usage = await checkAndConsumeUpload("file", e.target.files?.[0]?.name);
+      if (!usage.allowed) {
+        alert(usage.message);
+        return;
+      }
+
 
       const file = e.target.files?.[0];
       if (!file) return;
@@ -311,21 +508,30 @@ export default function Home() {
     }
   };
 
+
   const handleUrlAnalyze = async (incomingUrl?: string) => {
     try {
+      if (!requireSignedIn()) return;
       if (preventNewSourceWhileInDoc()) return;
-
+  
       const finalUrl = (incomingUrl || urlInput).trim();
       if (!finalUrl) return;
-
+  
+      const usage = await checkAndConsumeUpload("url", finalUrl);
+      if (!usage.allowed) {
+        alert(usage.message);
+        return;
+      }
+  
       setIsUploading(true);
       setAnswer("");
       setQuestion("");
-
+  
       const formData = new FormData();
-
+  
       let endpoint = "";
       let type: LibraryItem["type"] = "WEB";
+
 
       if (finalUrl.includes("youtube.com") || finalUrl.includes("youtu.be")) {
         formData.append("video_url", finalUrl);
@@ -431,12 +637,20 @@ export default function Home() {
     }
   };
 
-  const handlePasteAnalyze = async (inputText?: string) => {
-    if (preventNewSourceWhileInDoc()) return;
 
+  const handlePasteAnalyze = async (inputText?: string) => {
+    if (!requireSignedIn()) return;
+    if (preventNewSourceWhileInDoc()) return;
+  
     const text = inputText || pastedText;
     if (!text.trim()) return;
-
+  
+    const usage = await checkAndConsumeUpload("pasted_text", "Pasted Text");
+    if (!usage.allowed) {
+      alert(usage.message);
+      return;
+    }
+  
     try {
       setIsUploading(true);
 
@@ -478,9 +692,20 @@ export default function Home() {
     }
   };
 
+
   const handleCameraUpload = async (e: any) => {
     try {
+      if (!requireSignedIn()) return;
       if (preventNewSourceWhileInDoc()) return;
+  
+      const usage = await checkAndConsumeUpload(
+        "camera",
+        e.target.files?.[0]?.name || "Captured Image"
+      );
+      if (!usage.allowed) {
+        alert(usage.message);
+        return;
+      }
 
       const file = e.target.files?.[0];
       if (!file) return;
@@ -1274,16 +1499,90 @@ export default function Home() {
     setQuizScore(correctCount);
   };
 
+
   const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsAuthLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    setIsAuthLoading(false);
-    setShowAuthModal(false);
-    setAuthEmail("");
-    setAuthPassword("");
-    setAuthName("");
+    setAuthMessage("");
+  
+    try {
+      if (authMode === "signup") {
+        const { data, error } = await supabase.auth.signUp({
+          email: authEmail,
+          password: authPassword,
+        });
+  
+        if (error) throw error;
+  
+        if (data.user) {
+
+
+          await supabase.from("profiles").upsert({
+            id: data.user.id,
+            email: data.user.email,
+            full_name: authName,
+            tier: "free",
+          });
+
+        }
+  
+        setAuthMessage(
+          "Account created successfully. You can now sign in and start uploading."
+        );
+        setAuthMode("signin");
+        return;
+      }
+  
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: authEmail,
+        password: authPassword,
+      });
+  
+      if (error) throw error;
+  
+      setUser(data.user);
+      setShowAuthModal(false);
+      setAuthEmail("");
+      setAuthPassword("");
+      setAuthName("");
+      setAuthMessage("");
+    } catch (err: any) {
+      setAuthMessage(err.message || "Authentication failed.");
+    } finally {
+      setIsAuthLoading(false);
+    }
   };
+
+
+  const handleSignOut = async () => {
+    if (userActiveIdKey) {
+      localStorage.removeItem(userActiveIdKey);
+    }
+  
+    await supabase.auth.signOut();
+    setUser(null);
+    setLibrary([]);
+    setShowAuthModal(false);
+    setAuthMessage("");
+    setActiveId("");
+    setFileName("");
+    setSummary("");
+    setDocumentText("");
+    setQuestion("");
+    setAnswer("");
+    setStreamingText("");
+    setTabContent("");
+    setTranslatedTabContent("");
+    setQuizData([]);
+    setQuizAnswers({});
+    setQuizScore(null);
+    setCurrentQ(0);
+    setActiveTab("chat");
+    setChatLanguage("english");
+    setTabLanguage("english");
+  };
+
+
 
   const tabs = [
     { id: "chat" as const, label: "Chat", icon: MessageSquare },
@@ -1410,6 +1709,12 @@ export default function Home() {
                   </div>
                 </div>
 
+                {authMessage && (
+                  <div className="mb-4 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700">
+                    {authMessage}
+                  </div>
+                )}
+
                 <button
                   type="submit"
                   disabled={isAuthLoading}
@@ -1480,13 +1785,29 @@ export default function Home() {
             )}
 
             {/* Right: Sign In */}
-            <button
-              onClick={() => setShowAuthModal(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-teal-600 text-white font-medium rounded-xl hover:from-blue-700 hover:to-teal-700 shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 transition-all duration-200"
-            >
-              <LogIn className="w-4 h-4" />
-              <span className="hidden sm:inline">Sign In</span>
-            </button>
+
+            {user ? (
+              <button
+                onClick={handleSignOut}
+                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-teal-600 text-white font-medium rounded-xl hover:from-blue-700 hover:to-teal-700 shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 transition-all duration-200"
+              >
+                <LogIn className="w-4 h-4" />
+                <span className="hidden sm:inline">Sign Out</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => {
+                  setAuthMessage("");
+                  setAuthMode("signin");
+                  setShowAuthModal(true);
+                }}
+                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-teal-600 text-white font-medium rounded-xl hover:from-blue-700 hover:to-teal-700 shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 transition-all duration-200"
+              >
+                <LogIn className="w-4 h-4" />
+                <span className="hidden sm:inline">Sign In</span>
+              </button>
+            )}
+
           </div>
         </div>
       </header>
@@ -1577,6 +1898,7 @@ export default function Home() {
               </div>
             </div>
 
+
             {/* Library List */}
             <div className="flex-1 overflow-y-auto px-4 pb-4">
               {library.length === 0 ? (
@@ -1621,6 +1943,7 @@ export default function Home() {
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
+
                               handleRename(item.id);
                             }}
                             className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
@@ -1643,7 +1966,28 @@ export default function Home() {
                 </div>
               )}
             </div>
+
+              {user && (
+                <div className="mb-4 rounded-2xl border border-slate-200 bg-white/80 px-4 py-3 shadow-sm">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-400 text-white font-semibold uppercase">
+                      {(profile?.full_name || profile?.email || user.email || "U").charAt(0)}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-semibold text-slate-900">
+                        {profile?.full_name || profile?.email || user.email}
+                      </div>
+                      <div className="text-xs text-slate-500">
+                        {(profile?.tier || "free").charAt(0).toUpperCase() + (profile?.tier || "free").slice(1)} Plan
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+
           </div>
+
         </aside>
 
         {/* Main Content */}
@@ -1664,14 +2008,17 @@ export default function Home() {
                           <Sparkles className="w-6 h-6 lg:w-8 lg:h-8 text-white" />
                         </div>
                       </div>
-                      <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-2 lg:mb-3">
+                      <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-6 lg:mb-8">
                         Welcome to{" "}
                         <span className="bg-gradient-to-r from-blue-600 to-teal-500 bg-clip-text text-transparent">
-                          Examplift AI
+                          Examlift AI
                         </span>
                       </h1>
+                      <p className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-700">
+                        Stop studying hard. Start studying smart.
+                      </p>
                       <p className="text-sm sm:text-base lg:text-lg text-gray-600 max-w-lg mx-auto lg:mx-0 leading-relaxed">
-                        Your intelligent study companion. Upload any document and unlock AI-powered learning tools.
+                        Upload notes, screenshots, or snap a photo — then chat with them naturally. Get summaries, practice questions, and full mock exams.
                       </p>
                     </div>
 
