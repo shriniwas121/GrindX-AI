@@ -350,7 +350,6 @@ export default function Home() {
   };
 
 
-
   const requireSignedIn = () => {
     if (user) return true;
     setAuthMessage("Please sign in to upload and use your daily free limit.");
@@ -359,6 +358,8 @@ export default function Home() {
     return false;
   };
   
+
+
   const checkAndConsumeUpload = async (
     sourceType: "file" | "url" | "pasted_text" | "camera" | "screenshot",
     fileName?: string
@@ -372,14 +373,22 @@ export default function Home() {
   
     const today = new Date().toISOString().slice(0, 10);
   
-    const { data: profile } = await supabase
+    const { data: profile, error: profileError } = await supabase
       .from("profiles")
       .select("tier")
       .eq("id", user.id)
       .single();
   
+    if (profileError) {
+      return {
+        allowed: false,
+        message: "Could not load your plan. Please try again.",
+      };
+    }
+
+
     const tier = profile?.tier || "free";
-    const dailyLimit = tier === "free" ? 3 : tier === "premium" ? 10 : 50;
+    const dailyLimit = tier === "free" ? 5 : tier === "premium" ? 10 : 50;
   
     const { data: existing } = await supabase
       .from("daily_usage")
@@ -432,6 +441,82 @@ export default function Home() {
   
     return { allowed: true, message: "" };
   };
+
+
+  const checkAndConsumeChat = async () => {
+    if (!user) {
+      return {
+        allowed: false,
+        message: "Please sign in first.",
+      };
+    }
+  
+    const today = new Date().toISOString().slice(0, 10);
+  
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("tier")
+      .eq("id", user.id)
+      .single();
+
+    if (profileError) {
+      return {
+        allowed: false,
+        message: "Could not load your plan. Please try again.",
+      };
+    }
+
+  
+    const tier = profile?.tier || "free";
+    const dailyLimit = tier === "free" ? 15 : tier === "premium" ? 100 : 500;
+  
+    const { data: existing } = await supabase
+      .from("daily_chat_usage")
+      .select("id, chat_count")
+      .eq("user_id", user.id)
+      .eq("usage_date", today)
+      .maybeSingle();
+  
+    const currentCount = existing?.chat_count || 0;
+  
+    if (currentCount >= dailyLimit) {
+      return {
+        allowed: false,
+        message: `Daily chat limit reached. Your ${tier} plan allows ${dailyLimit} chats per day.`,
+      };
+    }
+  
+    if (existing?.id) {
+      const { error } = await supabase
+        .from("daily_chat_usage")
+        .update({ chat_count: currentCount + 1 })
+        .eq("id", existing.id);
+  
+      if (error) {
+        return {
+          allowed: false,
+          message: "Could not update chat usage. Please try again.",
+        };
+      }
+    } else {
+      const { error } = await supabase.from("daily_chat_usage").insert({
+        user_id: user.id,
+        usage_date: today,
+        chat_count: 1,
+      });
+  
+      if (error) {
+        return {
+          allowed: false,
+          message: "Could not start chat tracking. Please try again.",
+        };
+      }
+    }
+  
+    return { allowed: true, message: "" };
+  };
+
+
 
 
   const handleUploadButtonClick = async () => {
@@ -781,6 +866,14 @@ export default function Home() {
       console.log("ASK MODE:", activeId ? "DOCUMENT" : "GENERAL");
 
       if (!question.trim() || isAsking) return;
+
+      if (!requireSignedIn()) return;
+      
+      const chatUsage = await checkAndConsumeChat();
+      if (!chatUsage.allowed) {
+        alert(chatUsage.message);
+        return;
+      }
 
       // URL DETECTION
       const trimmed = question.trim();
