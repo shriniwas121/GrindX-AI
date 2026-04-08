@@ -105,7 +105,9 @@ export default function Home() {
   const userLibraryKey = user?.id ? `examlift_library_${user.id}` : null;
   const userActiveIdKey = user?.id ? `examlift_active_id_${user.id}` : null;
 
+  const urlInputRef = useRef<HTMLInputElement | null>(null);
 
+  const uploadAbortRef = useRef<AbortController | null>(null);
 
   // RESTORE LIBRARY ON PAGE LOAD
   useEffect(() => {
@@ -152,6 +154,14 @@ export default function Home() {
   }, [userLibraryKey, userActiveIdKey]);
 
 
+  const clearPendingUploadState = () => {
+    if (uploadAbortRef.current) {
+      uploadAbortRef.current.abort();
+      uploadAbortRef.current = null;
+    }
+    setIsUploading(false);
+  };
+
   const clearWorkspaceState = () => {
     setLibrary([]);
     setActiveId("");
@@ -170,8 +180,11 @@ export default function Home() {
     setCurrentQ(0);
     setUrlInput("");
     setPastedText("");
+    setIsUploading(false);
+    setIsAsking(false);
   };
-  
+
+
   const syncAuthState = async (session: any) => {
     const nextUser = session?.user ?? null;
     setUser(nextUser);
@@ -245,96 +258,136 @@ export default function Home() {
   }, [activeId, userActiveIdKey]);
 
 
+
   useEffect(() => {
+    let alive = true;
+  
     const handlePaste = async (e: ClipboardEvent) => {
       const items = e.clipboardData?.items;
-      if (!items) return;
-
-      for (const item of items) {
-        if (item.type.includes("image")) {
-
-          resetCurrentDocumentView();
-
-          const blob = item.getAsFile();
-          if (!blob) continue;
-
-
-          if (!(await requireSignedIn())) return;
-          
-          const usage = await checkAndConsumeUpload("screenshot", "Screenshot");
-          if (!usage.allowed) {
-            alert(usage.message);
-            return;
-          }
-
-
-          const formData = new FormData();
-          formData.append("file", blob);
-
-          setIsUploading(true);
-
-          try {
-            const res = await fetch(`${API}/ocr`, {
-              method: "POST",
-              body: formData,
-            });
-
-            if (!res.ok) {
-              const errorText = await res.text();
-              throw new Error(errorText);
-            }
-
-            const ocrData = await res.json();
-
-            const formData2 = new FormData();
-            formData2.append("text", ocrData.document_text || ocrData.text || "");
-
-            const summaryRes = await fetch(`${API}/summarize-text`, {
-              method: "POST",
-              body: formData2,
-            });
-
-            const summaryData = await summaryRes.json();
-
-            const safeSummary = summaryData.summary;
-            const safeText = ocrData.document_text || ocrData.text || "";
-
-            const newItem: LibraryItem = {
-              id: crypto.randomUUID(),
-              name: "Screenshot",
-              type: "TXT",
-              status: "Analyzed",
-              summary: safeSummary,
-              documentText: safeText,
-              chatHistory: [
-                {
-                  role: "assistant",
-                  content: `Here's a quick overview:\n\n${safeSummary}`,
-                  sourceType: "document",
-                },
-              ],
-            };
-
-            setLibrary((prev) => [newItem, ...prev]);
-            setActiveId(newItem.id);
-            setQuestion("");
-            setAnswer("");
-            setStreamingText("");
-          } catch (err) {
-            console.error(err);
-            alert("Screenshot failed");
-          } finally {
-            setIsUploading(false);
-          }
-
-          break;
+      if (!items || !alive) return;
+  
+      const imageItem = Array.from(items).find((item) =>
+        item.type.startsWith("image/")
+      );
+  
+      if (!imageItem) return;
+  
+      e.preventDefault();
+      e.stopPropagation();
+  
+      const blob = imageItem.getAsFile();
+      if (!blob) return;
+  
+      if (!(await requireSignedIn())) return;
+  
+      const usage = await checkAndConsumeUpload("screenshot", "Screenshot");
+      if (!usage.allowed) {
+        alert(usage.message);
+        return;
+      }
+  
+      resetCurrentDocumentView();
+      setIsUploading(true);
+  
+      try {
+        const formData = new FormData();
+        formData.append("user_id", user?.id || "");
+        formData.append("source_type", "screenshot");
+        formData.append("file", blob);
+  
+        const res = await fetch(`${API}/ocr`, {
+          method: "POST",
+          body: formData,
+        });
+  
+        if (!res.ok) {
+          const errorText = await res.text();
+          throw new Error(errorText);
+        }
+  
+        const ocrData = await res.json();
+  
+        const extractedText = ocrData.document_text || ocrData.text || "";
+        if (!extractedText.trim()) {
+          throw new Error("No text found in screenshot");
+        }
+  
+        const formData2 = new FormData();
+        formData2.append("user_id", user?.id || "");
+        formData2.append("text", extractedText);
+  
+        const summaryRes = await fetch(`${API}/summarize-text`, {
+          method: "POST",
+          body: formData2,
+        });
+  
+        if (!summaryRes.ok) {
+          const errorText = await summaryRes.text();
+          throw new Error(errorText);
+        }
+  
+        const summaryData = await summaryRes.json();
+  
+        if (!alive) return;
+  
+        const safeSummary = summaryData.summary || "No summary available";
+        const safeText = extractedText;
+  
+        const newItem: LibraryItem = {
+          id: crypto.randomUUID(),
+          name: "Screenshot",
+          type: "TXT",
+          status: "Analyzed",
+          summary: safeSummary,
+          documentText: safeText,
+          chatHistory: [
+            {
+              role: "assistant",
+              content: `Here's a quick overview:\n\n${safeSummary}`,
+              sourceType: "document",
+            },
+          ],
+        };
+  
+        setLibrary((prev) => [newItem, ...prev]);
+        setActiveId(newItem.id);
+        setFileName("Screenshot");
+        setSummary(safeSummary);
+        setDocumentText(safeText);
+        setQuestion("");
+        setAnswer("");
+        setStreamingText("");
+        setActiveTab("chat");
+        setTabContent("");
+        setTranslatedTabContent("");
+        setQuizData([]);
+        setQuizAnswers({});
+        setQuizScore(null);
+        setCurrentQ(0);
+        setChatLanguage("english");
+        setTabLanguage("english");
+      } catch (err) {
+        console.error(err);
+        if (alive) {
+          alert("Screenshot failed");
+        }
+      } finally {
+        if (alive) {
+          setIsUploading(false);
         }
       }
     };
-
+  
     window.addEventListener("paste", handlePaste);
-    return () => window.removeEventListener("paste", handlePaste);
-  }, [API, activeId, user]);
+  
+    return () => {
+      alive = false;
+      window.removeEventListener("paste", handlePaste);
+    };
+  }, [API, user]);
+
+
+
 
   const cleanContent = useMemo(() => {
     return (translatedTabContent || tabContent || "").replace(/\n/g, "\n\n");
@@ -365,7 +418,7 @@ export default function Home() {
     } = await supabase.auth.getSession();
   
     if (session?.user) {
-      setUser(session.user);
+      await syncAuthState(session);
       return true;
     }
   
@@ -380,11 +433,7 @@ export default function Home() {
     sourceType: "file" | "url" | "pasted_text" | "camera" | "screenshot",
     fileName?: string
   ) => {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-  
-    const currentUser = session?.user ?? user;
+    const currentUser = user;
   
     if (!currentUser) {
       return {
@@ -393,91 +442,12 @@ export default function Home() {
       };
     }
   
-    const today = new Date().toISOString().slice(0, 10);
-  
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("tier")
-      .eq("id", currentUser.id)
-      .single();
-  
-    if (profileError) {
-      return {
-        allowed: false,
-        message: "Could not load your plan. Please try again.",
-      };
-    }
-  
-    const tier = profile?.tier || "free";
-    const dailyLimit = tier === "free" ? 5 : tier === "premium" ? 10 : 50;
-  
-    const { data: existing, error: existingError } = await supabase
-      .from("daily_usage")
-      .select("id, upload_count")
-      .eq("user_id", currentUser.id)
-      .eq("usage_date", today)
-      .maybeSingle();
-  
-    if (existingError) {
-      return {
-        allowed: false,
-        message: "Could not load usage. Please try again.",
-      };
-    }
-  
-    const currentCount = existing?.upload_count || 0;
-  
-    if (currentCount >= dailyLimit) {
-      return {
-        allowed: false,
-        message: `Daily limit reached. Your ${tier} plan allows ${dailyLimit} uploads per day.`,
-      };
-    }
-  
-    if (existing?.id) {
-      const { error } = await supabase
-        .from("daily_usage")
-        .update({ upload_count: currentCount + 1 })
-        .eq("id", existing.id);
-  
-      if (error) {
-        return {
-          allowed: false,
-          message: "Could not update usage. Please try again.",
-        };
-      }
-    } else {
-      const { error } = await supabase.from("daily_usage").insert({
-        user_id: currentUser.id,
-        usage_date: today,
-        upload_count: 1,
-      });
-  
-      if (error) {
-        return {
-          allowed: false,
-          message: "Could not start usage tracking. Please try again.",
-        };
-      }
-    }
-  
-    await supabase.from("uploads").insert({
-      user_id: currentUser.id,
-      file_name: fileName || null,
-      source_type: sourceType,
-    });
-  
     return { allowed: true, message: "" };
   };
-
 
 
   const checkAndConsumeChat = async () => {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-  
-    const currentUser = session?.user ?? user;
+    const currentUser = user;
   
     if (!currentUser) {
       return {
@@ -486,80 +456,12 @@ export default function Home() {
       };
     }
   
-    const today = new Date().toISOString().slice(0, 10);
-  
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("tier")
-      .eq("id", currentUser.id)
-      .single();
-  
-    if (profileError) {
-      return {
-        allowed: false,
-        message: "Could not load your plan. Please try again.",
-      };
-    }
-  
-    const tier = profile?.tier || "free";
-    const dailyLimit = tier === "free" ? 15 : tier === "premium" ? 100 : 500;
-  
-    const { data: existing, error: existingError } = await supabase
-      .from("daily_chat_usage")
-      .select("id, chat_count")
-      .eq("user_id", currentUser.id)
-      .eq("usage_date", today)
-      .maybeSingle();
-  
-    if (existingError) {
-      return {
-        allowed: false,
-        message: "Could not load chat usage. Please try again.",
-      };
-    }
-  
-    const currentCount = existing?.chat_count || 0;
-  
-    if (currentCount >= dailyLimit) {
-      return {
-        allowed: false,
-        message: `Daily chat limit reached. Your ${tier} plan allows ${dailyLimit} chats per day.`,
-      };
-    }
-  
-    if (existing?.id) {
-      const { error } = await supabase
-        .from("daily_chat_usage")
-        .update({ chat_count: currentCount + 1 })
-        .eq("id", existing.id);
-  
-      if (error) {
-        return {
-          allowed: false,
-          message: "Could not update chat usage. Please try again.",
-        };
-      }
-    } else {
-      const { error } = await supabase.from("daily_chat_usage").insert({
-        user_id: currentUser.id,
-        usage_date: today,
-        chat_count: 1,
-      });
-  
-      if (error) {
-        return {
-          allowed: false,
-          message: "Could not start chat tracking. Please try again.",
-        };
-      }
-    }
-  
     return { allowed: true, message: "" };
   };
 
-
-
   const resetCurrentDocumentView = () => {
+    clearPendingUploadState();
+  
     setActiveId("");
     setFileName("");
     setSummary("");
@@ -576,11 +478,13 @@ export default function Home() {
     setCurrentQ(0);
     setUrlInput("");
     setPastedText("");
+    setIsAsking(false);
   
     if (userActiveIdKey) {
       localStorage.removeItem(userActiveIdKey);
     }
   };
+
 
 
 
@@ -611,7 +515,9 @@ export default function Home() {
   
       setIsUploading(true);
   
+      
       const formData = new FormData();
+      formData.append("user_id", user?.id || "");
       formData.append("file", file);
   
       const res = await fetch(`${API}/summarize`, {
@@ -659,16 +565,12 @@ export default function Home() {
   };
 
 
-
-
   const handleUrlAnalyze = async (incomingUrl?: string) => {
     try {
       if (!(await requireSignedIn())) return;
   
-      const finalUrl = (incomingUrl ?? urlInput).trim();
+      const finalUrl = (incomingUrl || urlInput).trim();
       if (!finalUrl) return;
-  
-      resetCurrentDocumentView();
   
       const usage = await checkAndConsumeUpload("url", finalUrl);
       if (!usage.allowed) {
@@ -676,13 +578,16 @@ export default function Home() {
         return;
       }
   
+      resetCurrentDocumentView();
       setIsUploading(true);
       setAnswer("");
       setQuestion("");
   
       const formData = new FormData();
-  
+      formData.append("user_id", user?.id || "");
       let endpoint = "";
+
+
       let type: LibraryItem["type"] = "WEB";
   
       if (finalUrl.includes("youtube.com") || finalUrl.includes("youtu.be")) {
@@ -695,16 +600,10 @@ export default function Home() {
         type = "WEB";
       }
   
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000);
-  
       const res = await fetch(endpoint, {
         method: "POST",
         body: formData,
-        signal: controller.signal,
       });
-  
-      clearTimeout(timeoutId);
   
       if (!res.ok) {
         const errorText = await res.text();
@@ -713,32 +612,15 @@ export default function Home() {
   
       const data = await res.json();
   
-      if (!data || (!data.summary && !data.document_text && !data.text && !data.transcript && !data.content)) {
-        throw new Error("Empty URL response");
-      }
-  
       const safeSummary =
-        data.summary ||
-        data.document_text ||
-        data.text ||
-        data.transcript ||
-        data.content ||
-        "No summary available";
+        data.summary || data.document_text || data.text || data.transcript || data.content || "No summary available";
   
       const safeText =
-        data.document_text ||
-        data.text ||
-        data.transcript ||
-        data.content ||
-        "";
-  
-      setSummary(safeSummary);
-      setFileName(data.filename || finalUrl);
-      setDocumentText(safeText);
+        data.document_text || data.text || data.transcript || data.content || "";
   
       const newItem: LibraryItem = {
         id: crypto.randomUUID(),
-        name: finalUrl,
+        name: finalUrl.length > 60 ? finalUrl.substring(0, 57) + "..." : finalUrl,
         type,
         status: "Analyzed",
         summary: safeSummary,
@@ -754,6 +636,140 @@ export default function Home() {
   
       setLibrary((prev) => [newItem, ...prev]);
       setActiveId(newItem.id);
+      setFileName(data.filename || finalUrl);
+      setSummary(safeSummary);
+      setDocumentText(safeText);
+      setQuestion("");
+      setAnswer("");
+      setStreamingText("");
+      setActiveTab("chat");
+      setTabContent("");
+      setTranslatedTabContent("");
+      setQuizData([]);
+      setQuizAnswers({});
+      setQuizScore(null);
+      setCurrentQ(0);
+      setChatLanguage("english");
+      setTabLanguage("english");
+      setUrlInput("");
+    } catch (err) {
+      console.error(err);
+      setSummary("URL analysis failed. Check backend terminal.");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  {/*
+  const handleUrlAnalyze = async (incomingUrl?: string) => {
+    console.log("handleUrlAnalyze START", {
+      incomingUrl,
+      urlInput,
+      isUploading,
+      hasUser: !!user,
+      API,
+    });
+  
+    clearPendingUploadState();
+  
+    try {
+      if (!(await requireSignedIn())) {
+        console.log("handleUrlAnalyze EXIT: requireSignedIn false");
+        return;
+      }
+      console.log("handleUrlAnalyze AFTER requireSignedIn");
+  
+      const finalUrl = (incomingUrl || urlInput).trim();
+      console.log("handleUrlAnalyze finalUrl:", finalUrl);
+  
+      if (!finalUrl) {
+        console.log("handleUrlAnalyze EXIT: finalUrl empty");
+        return;
+      }
+  
+      const usage = await checkAndConsumeUpload("url", finalUrl);
+      console.log("handleUrlAnalyze usage:", usage);
+  
+      if (!usage.allowed) {
+        alert(usage.message);
+        return;
+      }
+  
+      resetCurrentDocumentView();
+      setIsUploading(true);
+      setAnswer("");
+      setQuestion("");
+      setStreamingText("");
+      setUrlInput("");
+  
+      const formData = new FormData();
+      let endpoint = "";
+      let type: LibraryItem["type"] = "WEB";
+  
+      if (finalUrl.includes("youtube.com") || finalUrl.includes("youtu.be")) {
+        formData.append("video_url", finalUrl);
+        endpoint = `${API}/summarize-video`;
+        type = "VIDEO";
+      } else {
+        formData.append("website_url", finalUrl);
+        endpoint = `${API}/summarize-website`;
+        type = "WEB";
+      }
+  
+      const controller = new AbortController();
+      uploadAbortRef.current = controller;
+  
+      const timeoutId = window.setTimeout(() => controller.abort(), 15000);
+  
+      let res: Response;
+  
+      try {
+        res = await fetch(endpoint, {
+          method: "POST",
+          body: formData,
+          signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(timeoutId);
+      }
+  
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(errorText || "Failed to analyze URL");
+      }
+  
+      const data = await res.json();
+  
+      if (!data || (!data.summary && !data.document_text && !data.text && !data.transcript && !data.content)) {
+        throw new Error("Empty URL response");
+      }
+  
+      const safeSummary =
+        data.summary || data.document_text || data.text || data.transcript || data.content || "No summary available";
+      const safeText =
+        data.document_text || data.text || data.transcript || data.content || "";
+  
+      const newItem: LibraryItem = {
+        id: crypto.randomUUID(),
+        name: finalUrl.length > 60 ? finalUrl.substring(0, 57) + "..." : finalUrl,
+        type,
+        status: "Analyzed",
+        summary: safeSummary,
+        documentText: safeText,
+        chatHistory: [
+          {
+            role: "assistant",
+            content: `Here's a quick overview:\n\n${safeSummary}`,
+            sourceType: "document",
+          },
+        ],
+      };
+  
+      setLibrary((prev) => [newItem, ...prev]);
+      setActiveId(newItem.id);
+      setFileName(data.filename || finalUrl);
+      setSummary(safeSummary);
+      setDocumentText(safeText);
       setActiveTab("chat");
       setTabContent("");
       setTranslatedTabContent("");
@@ -771,7 +787,7 @@ export default function Home() {
       console.error("handleUrlAnalyze failed:", err);
   
       if (err?.name === "AbortError") {
-        setSummary("URL request timed out. Backend URL analysis is hanging.");
+        setSummary("URL analysis timed out. Please try again.");
       } else {
         setSummary("URL analysis failed. Check backend terminal.");
       }
@@ -779,10 +795,13 @@ export default function Home() {
       setQuestion("");
       setAnswer("");
       setStreamingText("");
+      setUrlInput("");
     } finally {
+      uploadAbortRef.current = null;
       setIsUploading(false);
     }
   };
+  */}
 
 
   const handlePasteAnalyze = async (inputText?: string) => {
@@ -803,6 +822,7 @@ export default function Home() {
       setIsUploading(true);
   
       const formData = new FormData();
+      formData.append("user_id", user?.id || "");
       formData.append("text", text);
   
       const res = await fetch(`${API}/summarize-text`, {
@@ -857,6 +877,8 @@ export default function Home() {
       setIsUploading(true);
   
       const formData = new FormData();
+      formData.append("user_id", user?.id || "");
+      formData.append("source_type", "camera");
       formData.append("file", file);
   
       const res = await fetch(`${API}/ocr`, {
@@ -925,23 +947,16 @@ export default function Home() {
     setIsAsking(false);
   };
 
+
   const handleAsk = async () => {
     try {
       console.log("ASK MODE:", activeId ? "DOCUMENT" : "GENERAL");
-
+  
       if (!question.trim() || isAsking) return;
-
-      if (!(await requireSignedIn())) return;
-      
-      const chatUsage = await checkAndConsumeChat();
-      if (!chatUsage.allowed) {
-        alert(chatUsage.message);
-        return;
-      }
-
-      // URL DETECTION
+  
+      // URL DETECTION MUST HAPPEN BEFORE CHAT AUTH/USAGE
       const trimmed = question.trim();
-
+  
       if (
         trimmed.startsWith("http://") ||
         trimmed.startsWith("https://") ||
@@ -954,39 +969,46 @@ export default function Home() {
         await handleUrlAnalyze(detectedUrl);
         return;
       }
-
+  
+      if (!(await requireSignedIn())) return;
+      
+      const chatUsage = await checkAndConsumeChat();
+      if (!chatUsage.allowed) {
+        alert(chatUsage.message);
+        return;
+      }
+  
       setIsAsking(true);
-
+  
       const userQuestion = question;
-
+  
       if (!activeId) {
         return;
       }
-
+  
       const activeItem = activeId
         ? library.find((item) => item.id === activeId)
         : null;
-
+  
       const isGeneralChat = !activeId;
-
+  
       if (!isGeneralChat && activeTab !== "chat" && activeTab !== "practice") {
         alert("Questions are only supported in Chat and Practice tabs.");
         return;
       }
-
-      // PUSH USER MESSAGE FIRST
+  
       if (activeId) {
         setLibrary((prev) =>
           prev.map((item) =>
             item.id === activeId
               ? {
-                ...item,
-                chatHistory: [
-                  ...item.chatHistory,
-                  { role: "user", content: userQuestion },
-                  { role: "assistant", content: "" },
-                ],
-              }
+                  ...item,
+                  chatHistory: [
+                    ...item.chatHistory,
+                    { role: "user", content: userQuestion },
+                    { role: "assistant", content: "" },
+                  ],
+                }
               : item
           )
         );
@@ -997,29 +1019,30 @@ export default function Home() {
           { role: "assistant", content: "" },
         ]);
       }
-
+  
       const docText = isGeneralChat
         ? ""
         : activeTab === "practice"
-          ? tabContent || activeItem?.documentText || ""
-          : activeItem?.documentText || "";
-
+        ? tabContent || activeItem?.documentText || ""
+        : activeItem?.documentText || "";
+  
       if (activeTab === "practice") {
         setActiveTab("chat");
       }
-
+  
       const chatHistoryText = isGeneralChat
         ? ""
         : activeItem?.chatHistory
-          ?.slice(-6)
-          .map((msg) => `${msg.role === "user" ? "User" : "Assistant"}: ${msg.content}`)
-          .join("\n") || "";
-
+            ?.slice(-6)
+            .map((msg) => `${msg.role === "user" ? "User" : "Assistant"}: ${msg.content}`)
+            .join("\n") || "";
+  
       const formData = new FormData();
+      formData.append("user_id", user?.id || "");
       formData.append("question", userQuestion);
       formData.append("document_text", docText);
       formData.append("chat_history", chatHistoryText);
-
+  
       const res = await fetch(`${API}/ask`, {
         method: "POST",
         headers: {
@@ -1027,41 +1050,40 @@ export default function Home() {
         },
         body: formData,
       });
-
+  
       if (!res.ok) {
         const errorText = await res.text();
         throw new Error(errorText);
       }
-
+  
       const data = await res.json();
-
+  
       const fullText = data.answer;
       const sourceType = data.source_type || "none";
-
+  
       setStreamingText("");
       setIsStreaming(true);
-
+  
       let i = 0;
-
+  
       askIntervalRef.current = setInterval(() => {
         const partial = fullText.slice(0, i + 1);
-
+  
         if (i < fullText.length) {
           setStreamingText(partial);
-
-          // UPDATE LAST MESSAGE
+  
           if (activeId) {
             setLibrary((prev) =>
               prev.map((item) =>
                 item.id === activeId
                   ? {
-                    ...item,
-                    chatHistory: item.chatHistory.map((msg, idx, arr) =>
-                      idx === arr.length - 1
-                        ? { ...msg, content: partial, sourceType }
-                        : msg
-                    ),
-                  }
+                      ...item,
+                      chatHistory: item.chatHistory.map((msg, idx, arr) =>
+                        idx === arr.length - 1
+                          ? { ...msg, content: partial, sourceType }
+                          : msg
+                      ),
+                    }
                   : item
               )
             );
@@ -1074,7 +1096,7 @@ export default function Home() {
               )
             );
           }
-
+  
           i++;
         } else {
           if (askIntervalRef.current) {
@@ -1084,9 +1106,8 @@ export default function Home() {
           setIsStreaming(false);
         }
       }, 20);
-
+  
       setQuestion("");
-
     } catch (err) {
       console.error(err);
       setAnswer("Question failed. Check backend.");
@@ -1619,7 +1640,10 @@ export default function Home() {
     ));
   };
 
+
   const startNewChat = () => {
+    clearPendingUploadState();
+  
     setActiveId("");
     setFileName("");
     setSummary("");
@@ -1636,12 +1660,14 @@ export default function Home() {
     setCurrentQ(0);
     setUrlInput("");
     setPastedText("");
+    setIsAsking(false);
     setShowSidebar(false);
   
     if (userActiveIdKey) {
       localStorage.removeItem(userActiveIdKey);
     }
   };
+
 
 
   const activeItem = library.find(i => i.id === activeId);
@@ -1962,6 +1988,7 @@ export default function Home() {
               </div>
             </div>
 
+
             {/* Center: Document Name */}
             {activeItem && (
               <div className="hidden md:flex items-center gap-2 px-4 py-1.5 bg-gradient-to-r from-blue-50 to-teal-50 border border-blue-100 rounded-full">
@@ -2018,6 +2045,20 @@ export default function Home() {
         >
           <div className="flex flex-col h-full">
             {/* Sidebar Header */}
+
+
+            {/* Upload Buttons */}
+            <div className="p-4 space-y-2">
+              <button
+                onClick={startNewChat}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-teal-600 text-white font-medium rounded-xl hover:from-blue-700 hover:to-teal-700 shadow-md hover:shadow-lg transition-all duration-200"
+              >
+                <Plus className="w-4 h-4" />
+                New Chat
+              </button>
+            </div>
+
+
             <div className="flex items-center justify-between px-4 py-4 border-b border-gray-100">
               <div className="flex items-center gap-2">
                 <Library className="w-5 h-5 text-blue-600" />
@@ -2031,60 +2072,6 @@ export default function Home() {
               </button>
             </div>
 
-            {/* Upload Buttons */}
-            <div className="p-4 space-y-2">
-              <button
-                onClick={startNewChat}
-                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-teal-600 text-white font-medium rounded-xl hover:from-blue-700 hover:to-teal-700 shadow-md hover:shadow-lg transition-all duration-200"
-              >
-                <Plus className="w-4 h-4" />
-                New Chat
-              </button>
-
-              <div className="flex gap-2">
-
-                <button
-                  onClick={handleUploadButtonClick}
-                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 border-2 border-gray-200 text-gray-700 font-medium rounded-xl hover:border-blue-300 hover:bg-blue-50 transition-all"
-                >
-                  <Upload className="w-4 h-4" />
-                  <span className="text-sm">Upload</span>
-                </button>
-
-                <label className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 border-2 border-gray-200 text-gray-700 font-medium rounded-xl hover:border-teal-300 hover:bg-teal-50 transition-all cursor-pointer">
-                  <Camera className="w-4 h-4" />
-                  <span className="text-sm">Camera</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    capture="environment"
-                    onChange={handleCameraUpload}
-                    className="hidden"
-                  />
-                </label>
-              </div>
-
-            </div>
-
-            {/* URL Input */}
-            <div className="px-4 pb-4">
-              <div className="flex gap-2">
-                <input
-                  type="url"
-                  value={urlInput}
-                  onChange={(e) => setUrlInput(e.target.value)}
-                  placeholder="Paste URL..."
-                  className="flex-1 px-3 py-2 border-2 border-gray-200 rounded-xl text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
-                />
-                <button
-                  onClick={() => handleUrlAnalyze()}
-                  disabled={isUploading || !urlInput}
-                  className="px-3 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50 transition-colors"
-                >
-                  <Link2 className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
 
 
             {/* Library List */}
@@ -2247,23 +2234,28 @@ export default function Home() {
 
                     {/* URL Input - Inline */}
 
+
                     <div className="flex items-center gap-2 mb-4 lg:mb-6">
                       <div className="flex-1 relative">
                         <Link2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    
                         <input
+                          ref={urlInputRef}
                           type="text"
                           value={urlInput}
                           onChange={(e) => setUrlInput(e.target.value)}
                           onKeyDown={(e) => {
                             if (e.key === "Enter") {
                               e.preventDefault();
+                              console.log("HERO ENTER URL:", e.currentTarget.value);
                               handleUrlAnalyze(e.currentTarget.value);
                             }
                           }}
-                          placeholder="Paste YouTube or website URL."
+                          placeholder="Paste YouTube, website URL or Screenshot."
                           className="w-full pl-10 pr-4 py-2.5 border-2 border-gray-200 rounded-xl text-sm focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all"
                         />
                       </div>
+                    
                       <button
                         type="button"
                         onClick={() => handleUrlAnalyze(urlInput)}
@@ -2273,6 +2265,8 @@ export default function Home() {
                         Analyze
                       </button>
                     </div>
+
+
 
                     {/* Trust Badges - Horizontal */}
                     <div className="flex flex-wrap justify-center lg:justify-start gap-4 lg:gap-6">

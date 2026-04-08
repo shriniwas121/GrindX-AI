@@ -19,6 +19,8 @@ from azure.ai.documentintelligence import DocumentIntelligenceClient
 from azure.core.credentials import AzureKeyCredential
 import base64
 from docx import Document
+from datetime import datetime, timezone
+
 
 try:
     from pypdf import PdfReader
@@ -37,6 +39,115 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+
+
+def log_usage_to_supabase(user_id: str, source_type: str, file_name: str | None = None):
+    if not SUPABASE_URL or not SUPABASE_SERVICE_ROLE_KEY or not user_id:
+        return
+
+    headers = {
+        "apikey": SUPABASE_SERVICE_ROLE_KEY,
+        "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}",
+        "Content-Type": "application/json",
+        "Prefer": "return=minimal",
+    }
+
+    today = datetime.now(timezone.utc).date().isoformat()
+
+    try:
+        # 1) log upload row
+        requests.post(
+            f"{SUPABASE_URL}/rest/v1/uploads",
+            headers=headers,
+            json={
+                "user_id": user_id,
+                "file_name": file_name,
+                "source_type": source_type,
+            },
+            timeout=10,
+        )
+
+        # 2) read existing daily_usage row
+        existing_res = requests.get(
+            f"{SUPABASE_URL}/rest/v1/daily_usage?user_id=eq.{user_id}&usage_date=eq.{today}&select=id,upload_count",
+            headers=headers,
+            timeout=10,
+        )
+        existing_res.raise_for_status()
+        existing = existing_res.json()
+
+        if existing:
+            row = existing[0]
+            requests.patch(
+                f"{SUPABASE_URL}/rest/v1/daily_usage?id=eq.{row['id']}",
+                headers=headers,
+                json={"upload_count": (row.get("upload_count") or 0) + 1},
+                timeout=10,
+            )
+        else:
+            requests.post(
+                f"{SUPABASE_URL}/rest/v1/daily_usage",
+                headers=headers,
+                json={
+                    "user_id": user_id,
+                    "usage_date": today,
+                    "upload_count": 1,
+                },
+                timeout=10,
+            )
+    except Exception as e:
+        print("SUPABASE LOG ERROR:", str(e))
+
+
+def log_chat_to_supabase(user_id: str):
+    if not SUPABASE_URL or not SUPABASE_SERVICE_ROLE_KEY or not user_id:
+        return
+
+    headers = {
+        "apikey": SUPABASE_SERVICE_ROLE_KEY,
+        "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}",
+        "Content-Type": "application/json",
+        "Prefer": "return=minimal",
+    }
+
+    today = datetime.now(timezone.utc).date().isoformat()
+
+    try:
+        existing_res = requests.get(
+            f"{SUPABASE_URL}/rest/v1/daily_chat_usage?user_id=eq.{user_id}&usage_date=eq.{today}&select=id,chat_count",
+            headers=headers,
+            timeout=10,
+        )
+        existing_res.raise_for_status()
+        existing = existing_res.json()
+
+        if existing:
+            row = existing[0]
+            requests.patch(
+                f"{SUPABASE_URL}/rest/v1/daily_chat_usage?id=eq.{row['id']}",
+                headers=headers,
+                json={"chat_count": (row.get("chat_count") or 0) + 1},
+                timeout=10,
+            )
+        else:
+            requests.post(
+                f"{SUPABASE_URL}/rest/v1/daily_chat_usage",
+                headers=headers,
+                json={
+                    "user_id": user_id,
+                    "usage_date": today,
+                    "chat_count": 1,
+                },
+                timeout=10,
+            )
+    except Exception as e:
+        print("SUPABASE CHAT LOG ERROR:", str(e))
+
 
 def get_client() -> AzureOpenAI:
     endpoint = os.getenv("AZURE_OPENAI_ENDPOINT", "")
@@ -148,51 +259,87 @@ def extract_youtube_video_id(url: str) -> str:
 
     return ""
 
+
 def get_youtube_transcript(url: str) -> str:
     video_id = extract_youtube_video_id(url)
     if not video_id:
-        return "Invalid YouTube URL."
-
-    ytt_api = YouTubeTranscriptApi()
-
-    transcript_list = ytt_api.list(video_id)
+        raise ValueError("Invalid YouTube URL.")
 
     try:
-        transcript = transcript_list.find_transcript(
-            ["en", "hi", "mr", "te", "gu", "fr"]
-        )
-    except:
-        transcript = transcript_list.find_generated_transcript(
-            ["hi", "mr", "te", "gu", "fr", "en"]
-        )
+        ytt_api = YouTubeTranscriptApi()
+        transcript_list = ytt_api.list(video_id)
 
-    data = transcript.fetch()
-    text_parts = [item.text for item in data]
+        try:
+            transcript = transcript_list.find_transcript(
+                ["en", "hi", "mr", "te", "gu", "fr"]
+            )
+        except Exception:
+            transcript = transcript_list.find_generated_transcript(
+                ["hi", "mr", "te", "gu", "fr", "en"]
+            )
 
-    return " ".join(text_parts)
+        data = transcript.fetch()
+        text_parts = []
+
+        for item in data:
+            if hasattr(item, "text"):
+                text_parts.append(item.text)
+            elif isinstance(item, dict):
+                text_parts.append(item.get("text", ""))
+
+        final_text = " ".join(part.strip() for part in text_parts if part and part.strip())
+
+        if not final_text:
+            raise ValueError("Transcript is empty.")
+
+        return final_text[:12000]
+
+    except Exception as e:
+        raise ValueError(f"Unable to fetch YouTube transcript: {str(e)}")
+
 
 
 def get_website_text(url: str) -> str:
     headers = {
-        "User-Agent": "Mozilla/5.0"
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/124.0.0.0 Safari/537.36"
+        )
     }
 
-    response = requests.get(url, headers=headers, timeout=10)
-    response.raise_for_status()
+    try:
+        response = requests.get(
+            url,
+            headers=headers,
+            timeout=(5, 12),
+            allow_redirects=True
+        )
+        response.raise_for_status()
 
-    soup = BeautifulSoup(response.text, "html.parser")
+        content_type = response.headers.get("Content-Type", "").lower()
+        if "text/html" not in content_type and "application/xhtml+xml" not in content_type:
+            raise ValueError("URL does not contain a readable HTML page.")
 
-    # remove noisy elements
-    for tag in soup(["script", "style", "noscript", "header", "footer", "nav", "aside"]):
-        tag.decompose()
+        soup = BeautifulSoup(response.text, "html.parser")
 
-    text = soup.get_text(separator=" ")
-    cleaned = " ".join(text.split())
+        for tag in soup(["script", "style", "noscript", "header", "footer", "svg"]):
+            tag.decompose()
 
-    if not cleaned:
-        return "No readable text found on this webpage."
+        text = soup.get_text(separator=" ", strip=True)
+        text = " ".join(text.split())
 
-    return cleaned
+        if not text:
+            raise ValueError("No readable text found on the webpage.")
+
+        return text[:12000]
+
+    except requests.exceptions.Timeout:
+        raise ValueError("Website request timed out.")
+    except requests.exceptions.RequestException as e:
+        raise ValueError(f"Unable to fetch website: {str(e)}")
+    except Exception as e:
+        raise ValueError(f"Unable to extract website text: {str(e)}")
 
 
 def extract_text_from_image(file_bytes: bytes) -> str:
@@ -259,10 +406,12 @@ def root():
 
 
 @app.post("/summarize")
-async def summarize(file: UploadFile = File(...)):
+async def summarize(
+    file: UploadFile = File(...),
+    user_id: str = Form("")
+):
     file_bytes = await file.read()
     text = extract_text(file, file_bytes)
-
 
     client = get_client()
     deployment_name = os.getenv("AZURE_OPENAI_DEPLOYMENT", "gpt-4o-mini")
@@ -285,6 +434,13 @@ async def summarize(file: UploadFile = File(...)):
     summary = response.choices[0].message.content or "No summary returned."
     summary = "\n".join(line.strip() for line in summary.splitlines() if line.strip())
 
+    if user_id:
+        log_usage_to_supabase(
+            user_id=user_id,
+            source_type="file",
+            file_name=file.filename
+        )
+
     return {
         "filename": file.filename,
         "summary": summary,
@@ -292,8 +448,13 @@ async def summarize(file: UploadFile = File(...)):
     }
 
 
+
+from fastapi import Form
 @app.post("/summarize-video")
-async def summarize_video(video_url: str = Form(...)):
+async def summarize_video(
+    video_url: str = Form(...),
+    user_id: str = Form("")
+):
     try:
         transcript_text = get_youtube_transcript(video_url)
 
@@ -325,6 +486,9 @@ async def summarize_video(video_url: str = Form(...)):
         summary = response.choices[0].message.content or "No summary returned."
         summary = "\n".join(line.strip() for line in summary.splitlines() if line.strip())
 
+        if user_id:
+            log_usage_to_supabase(user_id=user_id, source_type="url", file_name=video_url)
+
         return {
             "filename": video_url,
             "summary": summary,
@@ -340,8 +504,13 @@ async def summarize_video(video_url: str = Form(...)):
         }
 
 
+from fastapi import Form
+
 @app.post("/summarize-website")
-async def summarize_website(website_url: str = Form(...)):
+async def summarize_website(
+    website_url: str = Form(...),
+    user_id: str = Form("")
+):
     try:
         website_text = get_website_text(website_url)
 
@@ -365,7 +534,10 @@ async def summarize_website(website_url: str = Form(...)):
 
         summary = response.choices[0].message.content or "No summary returned."
         summary = "\n".join(line.strip() for line in summary.splitlines() if line.strip())
-    
+
+        if user_id:
+            log_usage_to_supabase(user_id=user_id, source_type="url", file_name=website_url)
+
         return {
             "filename": website_url,
             "summary": summary,
@@ -379,6 +551,7 @@ async def summarize_website(website_url: str = Form(...)):
             "summary": f"Website analysis failed: {str(e)}",
             "document_text": "",
         }
+
 
 
 def chunk_text(text: str, chunk_size: int = 800) -> list[str]:
@@ -666,8 +839,12 @@ async def translate(
         print("TRANSLATE ERROR:", str(e))
         return {"translated_text": text}
 
+
 @app.post("/summarize-text")
-async def summarize_text(text: str = Form(...)):
+async def summarize_text(
+    text: str = Form(...),
+    user_id: str = Form("")
+):
     if not text.strip():
         return {
             "summary": "No text provided.",
@@ -694,10 +871,18 @@ async def summarize_text(text: str = Form(...)):
 
     summary = response.choices[0].message.content or "No summary returned."
 
+    if user_id:
+        log_usage_to_supabase(
+            user_id=user_id,
+            source_type="pasted_text",
+            file_name="Pasted Text"
+        )
+
     return {
         "summary": summary,
         "document_text": text[:15000],
     }
+
 
 
 @app.post("/key-concepts")
@@ -1051,12 +1236,16 @@ async def vision_analyze(file: UploadFile = File(...)):
         }
 
 
+
 @app.post("/ocr")
-async def ocr(file: UploadFile = File(...)):
+async def ocr(
+    file: UploadFile = File(...),
+    user_id: str = Form(""),
+    source_type: str = Form("camera")
+):
     try:
         file_bytes = await file.read()
 
-        # 🔒 IMAGE SIZE PROTECTION (5MB)
         MAX_SIZE = 5 * 1024 * 1024
         if len(file_bytes) > MAX_SIZE:
             raise HTTPException(
@@ -1066,12 +1255,18 @@ async def ocr(file: UploadFile = File(...)):
 
         text = extract_text_from_image(file_bytes)
 
-        # 🔥 HANDLE EMPTY OCR RESULT
         if not text or not text.strip():
             return {
                 "summary": "⚠️ No readable text found. Try clearer image.",
                 "document_text": ""
             }
+
+        if user_id:
+            log_usage_to_supabase(
+                user_id=user_id,
+                source_type=source_type,
+                file_name=file.filename or source_type
+            )
 
         return {
             "summary": text,
@@ -1086,12 +1281,15 @@ async def ocr(file: UploadFile = File(...)):
         }
 
 
+
+
 @app.post("/ask")
 async def ask(
     request: Request,
     question: str = Form(...),
     document_text: str = Form(...),
-    chat_history: str = Form("")
+    chat_history: str = Form(""),
+    user_id: str = Form("")
 ):
 
     # 🔐 SECURITY CHECK (ADD THIS HERE)
@@ -1104,6 +1302,10 @@ async def ask(
     simple_phrases = ["thanks", "thank you", "ok", "cool", "great", "nice", "got it"]
     
     if question.strip().lower() in simple_phrases:
+        if user_id:
+            log_chat_to_supabase(user_id)
+
+
         return {
             "answer": f"{question.capitalize()} 😊",
             "source_type": "external"
