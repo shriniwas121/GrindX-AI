@@ -104,6 +104,59 @@ def log_usage_to_supabase(user_id: str, source_type: str, file_name: str | None 
         print("SUPABASE LOG ERROR:", str(e))
 
 
+def get_daily_limit_for_tier(tier: str) -> int:
+    tier = (tier or "free").lower()
+    if tier == "premium":
+        return 100
+    if tier == "pro":
+        return 500
+    return 50
+
+
+def check_upload_limit_in_supabase(user_id: str):
+    if not SUPABASE_URL or not SUPABASE_SERVICE_ROLE_KEY or not user_id:
+        return True, ""
+
+    headers = {
+        "apikey": SUPABASE_SERVICE_ROLE_KEY,
+        "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}",
+        "Content-Type": "application/json",
+        "Prefer": "return=minimal",
+    }
+
+    today = datetime.now(timezone.utc).date().isoformat()
+
+    try:
+        profile_res = requests.get(
+            f"{SUPABASE_URL}/rest/v1/profiles?id=eq.{user_id}&select=tier",
+            headers=headers,
+            timeout=10,
+        )
+        profile_res.raise_for_status()
+        profile_rows = profile_res.json()
+        tier = profile_rows[0]["tier"] if profile_rows and profile_rows[0].get("tier") else "free"
+
+        daily_limit = get_daily_limit_for_tier(tier)
+
+        usage_res = requests.get(
+            f"{SUPABASE_URL}/rest/v1/daily_usage?user_id=eq.{user_id}&usage_date=eq.{today}&select=upload_count",
+            headers=headers,
+            timeout=10,
+        )
+        usage_res.raise_for_status()
+        usage_rows = usage_res.json()
+
+        current_count = usage_rows[0]["upload_count"] if usage_rows and usage_rows[0].get("upload_count") is not None else 0
+
+        if current_count >= daily_limit:
+            return False, f"Daily limit reached. Your {tier} plan allows {daily_limit} uploads per day."
+
+        return True, ""
+
+    except Exception as e:
+        print("SUPABASE LIMIT CHECK ERROR:", str(e))
+        return False, "Could not verify upload limit. Please try again."
+
 def log_chat_to_supabase(user_id: str):
     if not SUPABASE_URL or not SUPABASE_SERVICE_ROLE_KEY or not user_id:
         return
@@ -147,6 +200,61 @@ def log_chat_to_supabase(user_id: str):
             )
     except Exception as e:
         print("SUPABASE CHAT LOG ERROR:", str(e))
+
+
+def get_daily_chat_limit_for_tier(tier: str) -> int:
+    tier = (tier or "free").lower()
+    if tier == "premium":
+        return 100
+    if tier == "pro":
+        return 500
+    return 15
+
+
+def check_chat_limit_in_supabase(user_id: str):
+    if not SUPABASE_URL or not SUPABASE_SERVICE_ROLE_KEY or not user_id:
+        return True, ""
+
+    headers = {
+        "apikey": SUPABASE_SERVICE_ROLE_KEY,
+        "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}",
+        "Content-Type": "application/json",
+        "Prefer": "return=minimal",
+    }
+
+    today = datetime.now(timezone.utc).date().isoformat()
+
+    try:
+        profile_res = requests.get(
+            f"{SUPABASE_URL}/rest/v1/profiles?id=eq.{user_id}&select=tier",
+            headers=headers,
+            timeout=10,
+        )
+        profile_res.raise_for_status()
+        profile_rows = profile_res.json()
+        tier = profile_rows[0]["tier"] if profile_rows and profile_rows[0].get("tier") else "free"
+
+        daily_limit = get_daily_chat_limit_for_tier(tier)
+
+        usage_res = requests.get(
+            f"{SUPABASE_URL}/rest/v1/daily_chat_usage?user_id=eq.{user_id}&usage_date=eq.{today}&select=chat_count",
+            headers=headers,
+            timeout=10,
+        )
+        usage_res.raise_for_status()
+        usage_rows = usage_res.json()
+
+        current_count = usage_rows[0]["chat_count"] if usage_rows and usage_rows[0].get("chat_count") is not None else 0
+
+        if current_count >= daily_limit:
+            return False, f"Daily chat limit reached. Your {tier} plan allows {daily_limit} chats per day."
+
+        return True, ""
+
+    except Exception as e:
+        print("SUPABASE CHAT LIMIT CHECK ERROR:", str(e))
+        return False, "Could not verify chat limit. Please try again."
+
 
 
 def get_client() -> AzureOpenAI:
@@ -410,12 +518,24 @@ async def summarize(
     file: UploadFile = File(...),
     user_id: str = Form("")
 ):
+
+    if user_id:
+        allowed, message = check_upload_limit_in_supabase(user_id)
+        if not allowed:
+            return {
+                "filename": file.filename,
+                "summary": message,
+                "document_text": "",
+            }
+
+
     file_bytes = await file.read()
     text = extract_text(file, file_bytes)
 
     client = get_client()
     deployment_name = os.getenv("AZURE_OPENAI_DEPLOYMENT", "gpt-4o-mini")
     
+
     response = client.chat.completions.create(
         model=deployment_name,
         messages=[
@@ -433,6 +553,7 @@ async def summarize(
 
     summary = response.choices[0].message.content or "No summary returned."
     summary = "\n".join(line.strip() for line in summary.splitlines() if line.strip())
+
 
     if user_id:
         log_usage_to_supabase(
@@ -456,6 +577,17 @@ async def summarize_video(
     user_id: str = Form("")
 ):
     try:
+
+        if user_id:
+            allowed, message = check_upload_limit_in_supabase(user_id)
+            if not allowed:
+                return {
+                    "filename": video_url,
+                    "summary": message,
+                    "document_text": "",
+                }
+
+
         transcript_text = get_youtube_transcript(video_url)
 
         if not transcript_text or transcript_text.strip() == "":
@@ -512,6 +644,17 @@ async def summarize_website(
     user_id: str = Form("")
 ):
     try:
+
+        if user_id:
+            allowed, message = check_upload_limit_in_supabase(user_id)
+            if not allowed:
+                return {
+                    "filename": website_url,
+                    "summary": message,
+                    "document_text": "",
+                }
+
+
         website_text = get_website_text(website_url)
 
         client = get_client()
@@ -845,6 +988,15 @@ async def summarize_text(
     text: str = Form(...),
     user_id: str = Form("")
 ):
+
+    if user_id:
+        allowed, message = check_upload_limit_in_supabase(user_id)
+        if not allowed:
+            return {
+                "summary": message,
+                "document_text": "",
+            }
+
     if not text.strip():
         return {
             "summary": "No text provided.",
@@ -1244,6 +1396,17 @@ async def ocr(
     source_type: str = Form("camera")
 ):
     try:
+
+        if user_id:
+            allowed, message = check_upload_limit_in_supabase(user_id)
+            if not allowed:
+                return {
+                    "summary": message,
+                    "document_text": "",
+                }
+
+
+
         file_bytes = await file.read()
 
         MAX_SIZE = 5 * 1024 * 1024
@@ -1292,10 +1455,19 @@ async def ask(
     user_id: str = Form("")
 ):
 
+
     # 🔐 SECURITY CHECK (ADD THIS HERE)
     if request.headers.get("x-api-key") != os.getenv("APP_API_KEY"):
         raise HTTPException(status_code=401, detail="Unauthorized")
 
+
+    if user_id:
+        allowed, message = check_chat_limit_in_supabase(user_id)
+        if not allowed:
+            return {
+                "answer": message,
+                "source_type": "none",
+            }
 
 
     # ✅ CASUAL CHAT (PUT EXACTLY HERE)

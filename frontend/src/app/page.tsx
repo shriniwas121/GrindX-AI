@@ -1770,17 +1770,19 @@ export default function Home() {
 
 
   const handleSignOut = async () => {
-    if (userActiveIdKey) {
-      localStorage.removeItem(userActiveIdKey);
+    try {
+      if (userActiveIdKey) {
+        localStorage.removeItem(userActiveIdKey);
+      }
+  
+      setShowAuthModal(false);
+      setAuthMessage("");
+      setShowSidebar(false);
+  
+      await supabase.auth.signOut();
+    } catch (err) {
+      console.error("Sign out failed:", err);
     }
-  
-    await supabase.auth.signOut();
-  
-    await syncAuthState(null);
-  
-    setShowAuthModal(false);
-    setAuthMessage("");
-    setShowSidebar(false);
   };
 
 
