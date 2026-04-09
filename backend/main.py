@@ -107,10 +107,10 @@ def log_usage_to_supabase(user_id: str, source_type: str, file_name: str | None 
 def get_daily_limit_for_tier(tier: str) -> int:
     tier = (tier or "free").lower()
     if tier == "premium":
-        return 100
+        return 15
     if tier == "pro":
-        return 500
-    return 50
+        return 50
+    return 5
 
 
 def check_upload_limit_in_supabase(user_id: str):
@@ -1668,6 +1668,10 @@ async def ask(
     print("CHUNK SCORE:", max_score)
     print("SOURCE:", source_type)
     print("-------------------")
+
+
+    if user_id:
+        log_chat_to_supabase(user_id)
 
 
     return {
