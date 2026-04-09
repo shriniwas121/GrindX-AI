@@ -154,6 +154,23 @@ export default function Home() {
   }, [userLibraryKey, userActiveIdKey]);
 
 
+  const handleGoogleSignIn = async () => {
+    const redirectTo =
+      window.location.hostname === "localhost"
+        ? "http://localhost:3000"
+        : "https://examlift.insightxai.com.au";
+  
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo },
+    });
+  
+    if (error) {
+      setAuthMessage(error.message || "Google sign-in failed.");
+    }
+  };
+
+
   const clearPendingUploadState = () => {
     if (uploadAbortRef.current) {
       uploadAbortRef.current.abort();
@@ -1826,6 +1843,15 @@ export default function Home() {
 
             {/* Modal Body */}
             <div className="p-8">
+              <button
+                onClick={handleGoogleSignIn}
+                disabled={isAuthLoading}
+                className="w-full flex items-center justify-center gap-3 px-4 py-3 border-2 border-gray-200 rounded-xl font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 disabled:opacity-50"
+              >
+                <GoogleIcon />
+                Continue with Google
+              </button>
+
               {/*
               <button
                 onClick={() => {
