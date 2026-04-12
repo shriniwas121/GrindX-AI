@@ -20,7 +20,7 @@ from azure.core.credentials import AzureKeyCredential
 import base64
 from docx import Document
 from datetime import datetime, timezone
-
+import stripe
 
 try:
     from pypdf import PdfReader
@@ -30,7 +30,7 @@ except Exception:
 load_dotenv()
 
 
-app = FastAPI(title="Examlift AI Backend")
+app = FastAPI(title="GrindX AI Backend")
 
 app.add_middleware(
     CORSMiddleware,
@@ -44,6 +44,14 @@ app.add_middleware(
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+
+STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "")
+STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "")
+STRIPE_PRICE_ID_PREMIUM = os.getenv("STRIPE_PRICE_ID_PREMIUM", "")
+STRIPE_PRICE_ID_PRO = os.getenv("STRIPE_PRICE_ID_PRO", "")
+FRONTEND_BASE_URL = os.getenv("FRONTEND_BASE_URL", "http://localhost:3000")
+
+stripe.api_key = STRIPE_SECRET_KEY
 
 
 def log_usage_to_supabase(user_id: str, source_type: str, file_name: str | None = None):
@@ -254,6 +262,121 @@ def check_chat_limit_in_supabase(user_id: str):
     except Exception as e:
         print("SUPABASE CHAT LIMIT CHECK ERROR:", str(e))
         return False, "Could not verify chat limit. Please try again."
+
+
+def get_supabase_headers():
+    return {
+        "apikey": SUPABASE_SERVICE_ROLE_KEY,
+        "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}",
+        "Content-Type": "application/json",
+        "Prefer": "return=representation",
+    }
+
+
+def unix_to_iso(ts):
+    if not ts:
+        return None
+    return datetime.fromtimestamp(ts, tz=timezone.utc).isoformat()
+
+
+def get_profile_by_user_id(user_id: str):
+    if not SUPABASE_URL or not SUPABASE_SERVICE_ROLE_KEY or not user_id:
+        return None
+
+    try:
+        res = requests.get(
+            f"{SUPABASE_URL}/rest/v1/profiles?id=eq.{user_id}&select=*",
+            headers=get_supabase_headers(),
+            timeout=10,
+        )
+        res.raise_for_status()
+        rows = res.json()
+        return rows[0] if rows else None
+    except Exception as e:
+        print("GET PROFILE ERROR:", str(e))
+        return None
+
+
+def update_profile_subscription_fields(user_id: str, payload: dict):
+    if not SUPABASE_URL or not SUPABASE_SERVICE_ROLE_KEY or not user_id:
+        return
+
+    try:
+        requests.patch(
+            f"{SUPABASE_URL}/rest/v1/profiles?id=eq.{user_id}",
+            headers=get_supabase_headers(),
+            json=payload,
+            timeout=10,
+        ).raise_for_status()
+    except Exception as e:
+        print("UPDATE PROFILE SUBSCRIPTION ERROR:", str(e))
+
+
+def get_or_create_stripe_customer(user_id: str, email: str | None = None):
+    profile = get_profile_by_user_id(user_id) or {}
+
+    existing_customer_id = profile.get("stripe_customer_id")
+    if existing_customer_id:
+        return existing_customer_id
+
+    customer = stripe.Customer.create(
+        email=email,
+        metadata={"user_id": user_id}
+    )
+
+    update_profile_subscription_fields(
+        user_id,
+        {"stripe_customer_id": customer.id}
+    )
+
+    return customer.id
+
+def apply_subscription_to_profile(user_id: str, subscription):
+    status = subscription.get("status", "free")
+    cancel_at_period_end = bool(subscription.get("cancel_at_period_end", False))
+    trial_end = unix_to_iso(subscription.get("trial_end"))
+    current_period_end = unix_to_iso(subscription.get("current_period_end"))
+
+    tier = "free"
+    active_statuses = {"trialing", "active"}
+
+    if status in active_statuses:
+        items = subscription.get("items", {}).get("data", [])
+        price_id = None
+
+        if items and items[0].get("price"):
+            price_id = items[0]["price"].get("id")
+
+        if price_id == STRIPE_PRICE_ID_PRO:
+            tier = "pro"
+        elif price_id == STRIPE_PRICE_ID_PREMIUM:
+            tier = "premium"
+
+    update_profile_subscription_fields(
+        user_id,
+        {
+            "tier": tier,
+            "subscription_status": status,
+            "trial_ends_at": trial_end,
+            "plan_ends_at": current_period_end,
+            "stripe_subscription_id": subscription.get("id"),
+            "subscription_cancel_at_period_end": cancel_at_period_end,
+        },
+    )
+
+
+def downgrade_profile_to_free(user_id: str):
+    update_profile_subscription_fields(
+        user_id,
+        {
+            "tier": "free",
+            "subscription_status": "free",
+            "trial_ends_at": None,
+            "plan_ends_at": None,
+            "stripe_subscription_id": None,
+            "subscription_cancel_at_period_end": False,
+        },
+    )
 
 
 
@@ -506,11 +629,160 @@ def extract_text_from_image(file_bytes: bytes) -> str:
     return final_text
 
 
+@app.post("/billing/create-checkout-session")
+async def create_checkout_session(request: Request):
+    if request.headers.get("x-api-key") != os.getenv("APP_API_KEY"):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    body = await request.json()
+    user_id = body.get("user_id", "").strip()
+    email = body.get("email", "").strip()
+    plan = body.get("plan", "premium").strip().lower()
+
+    if not user_id:
+        raise HTTPException(status_code=400, detail="Missing user_id")
+
+    if not STRIPE_SECRET_KEY or not STRIPE_PRICE_ID_PREMIUM or not STRIPE_PRICE_ID_PRO:
+        raise HTTPException(status_code=500, detail="Stripe is not configured")
+
+    if plan not in {"premium", "pro"}:
+        raise HTTPException(status_code=400, detail="Invalid plan")
+
+    customer_id = get_or_create_stripe_customer(user_id, email)
+
+    selected_price_id = STRIPE_PRICE_ID_PREMIUM if plan == "premium" else STRIPE_PRICE_ID_PRO
+
+    subscription_data = {
+        "metadata": {
+            "user_id": user_id,
+            "plan": plan,
+        },
+    }
+
+    if plan == "premium":
+        subscription_data["trial_period_days"] = 7
+
+    session = stripe.checkout.Session.create(
+        mode="subscription",
+        customer=customer_id,
+        line_items=[
+            {
+                "price": selected_price_id,
+                "quantity": 1,
+            }
+        ],
+        subscription_data=subscription_data,
+        success_url=f"{FRONTEND_BASE_URL}?billing=success",
+        cancel_url=f"{FRONTEND_BASE_URL}?billing=cancel",
+        allow_promotion_codes=True,
+    )
+
+    return {"url": session.url}
+
+@app.post("/billing/create-portal-session")
+async def create_portal_session(request: Request):
+    if request.headers.get("x-api-key") != os.getenv("APP_API_KEY"):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    body = await request.json()
+    user_id = body.get("user_id", "").strip()
+
+    if not user_id:
+        raise HTTPException(status_code=400, detail="Missing user_id")
+
+    profile = get_profile_by_user_id(user_id) or {}
+    customer_id = profile.get("stripe_customer_id")
+
+    if not customer_id:
+        raise HTTPException(status_code=400, detail="No Stripe customer found")
+
+    session = stripe.billing_portal.Session.create(
+        customer=customer_id,
+        return_url=FRONTEND_BASE_URL,
+    )
+
+    return {"url": session.url}
+
+
+@app.post("/billing/webhook")
+async def stripe_webhook(request: Request):
+    payload = await request.body()
+    sig_header = request.headers.get("stripe-signature")
+
+    try:
+        event = stripe.Webhook.construct_event(
+            payload,
+            sig_header,
+            STRIPE_WEBHOOK_SECRET
+        )
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Webhook error: {str(e)}")
+
+    event_type = event["type"]
+    obj = event["data"]["object"]
+
+    try:
+        if event_type == "checkout.session.completed":
+            user_id = (
+                obj.get("metadata", {}).get("user_id")
+                or obj.get("subscription_details", {}).get("metadata", {}).get("user_id")
+            )
+            customer_id = obj.get("customer")
+
+            if user_id and customer_id:
+                update_profile_subscription_fields(
+                    user_id,
+                    {"stripe_customer_id": customer_id}
+                )
+
+        elif event_type in ["customer.subscription.created", "customer.subscription.updated"]:
+            subscription = obj
+            user_id = subscription.get("metadata", {}).get("user_id")
+
+            if not user_id:
+                customer_id = subscription.get("customer")
+                if customer_id:
+                    res = requests.get(
+                        f"{SUPABASE_URL}/rest/v1/profiles?stripe_customer_id=eq.{customer_id}&select=id",
+                        headers=get_supabase_headers(),
+                        timeout=10,
+                    )
+                    res.raise_for_status()
+                    rows = res.json()
+                    user_id = rows[0]["id"] if rows else None
+
+            if user_id:
+                apply_subscription_to_profile(user_id, subscription)
+
+        elif event_type == "customer.subscription.deleted":
+            subscription = obj
+            user_id = subscription.get("metadata", {}).get("user_id")
+
+            if not user_id:
+                customer_id = subscription.get("customer")
+                if customer_id:
+                    res = requests.get(
+                        f"{SUPABASE_URL}/rest/v1/profiles?stripe_customer_id=eq.{customer_id}&select=id",
+                        headers=get_supabase_headers(),
+                        timeout=10,
+                    )
+                    res.raise_for_status()
+                    rows = res.json()
+                    user_id = rows[0]["id"] if rows else None
+
+            if user_id:
+                downgrade_profile_to_free(user_id)
+
+    except Exception as e:
+        print("STRIPE WEBHOOK HANDLER ERROR:", str(e))
+        raise HTTPException(status_code=500, detail="Webhook handler failed")
+
+    return {"received": True}
 
 
 @app.get("/")
 def root():
-    return {"message": "Examlift AI backend is running"}
+    return {"message": "GrindX AI backend is running"}
 
 
 @app.post("/summarize")

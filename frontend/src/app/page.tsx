@@ -100,10 +100,24 @@ export default function Home() {
   const [user, setUser] = useState<any>(null);
   const [authMessage, setAuthMessage] = useState("");
 
-  const [profile, setProfile] = useState<{ email?: string; tier?: string; full_name?: string } | null>(null);
+  const [profile, setProfile] = useState<{
+    email?: string;
+    tier?: string;
+    full_name?: string;
+    subscription_status?: string;
+    trial_ends_at?: string | null;
+    plan_ends_at?: string | null;
+    stripe_customer_id?: string | null;
+    stripe_subscription_id?: string | null;
+    subscription_cancel_at_period_end?: boolean | null;
+  } | null>(null);
+  
+  const [isBillingLoading, setIsBillingLoading] = useState(false);
 
-  const userLibraryKey = user?.id ? `examlift_library_${user.id}` : null;
-  const userActiveIdKey = user?.id ? `examlift_active_id_${user.id}` : null;
+
+
+  const userLibraryKey = user?.id ? `grindx_library_${user.id}` : null;
+  const userActiveIdKey = user?.id ? `grindx_active_id_${user.id}` : null;
 
   const urlInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -158,7 +172,7 @@ export default function Home() {
     const redirectTo =
       window.location.hostname === "localhost"
         ? "http://localhost:3000"
-        : "https://examlift.insightxai.com.au";
+        : "https://grindx.insightxai.com.au";
   
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
@@ -202,6 +216,18 @@ export default function Home() {
   };
 
 
+  const fetchProfile = async (userId: string) => {
+    const { data: profileData } = await supabase
+      .from("profiles")
+      .select(
+        "email, tier, full_name, subscription_status, trial_ends_at, plan_ends_at, stripe_customer_id, stripe_subscription_id, subscription_cancel_at_period_end"
+      )
+      .eq("id", userId)
+      .single();
+  
+    setProfile(profileData || null);
+  };
+
   const syncAuthState = async (session: any) => {
     const nextUser = session?.user ?? null;
     setUser(nextUser);
@@ -217,14 +243,103 @@ export default function Home() {
       email: nextUser.email,
     });
   
-    const { data: profileData } = await supabase
-      .from("profiles")
-      .select("email, tier, full_name")
-      .eq("id", nextUser.id)
-      .single();
-  
-    setProfile(profileData || null);
+    await fetchProfile(nextUser.id);
   };
+  
+
+
+  const formatPlanDate = (value?: string | null) => {
+    if (!value) return "";
+    return new Date(value).toLocaleDateString();
+  };
+
+  const currentTier = (profile?.tier || "free").toLowerCase();
+  const isPremiumUser = currentTier === "premium";
+  const isProUser = currentTier === "pro";
+  const hasPaidPlan = isPremiumUser || isProUser;
+
+  const startCheckoutForPlan = async (plan: "premium" | "pro") => {
+    if (!user) return;
+
+    try {
+      setIsBillingLoading(true);
+
+      const res = await fetch(`${API}/billing/create-checkout-session`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": process.env.NEXT_PUBLIC_APP_API_KEY || "",
+        },
+        body: JSON.stringify({
+          user_id: user.id,
+          email: user.email,
+          plan,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data?.detail || data?.message || `Unable to start ${plan} checkout.`);
+      }
+
+      if (data?.url) {
+        window.location.href = data.url;
+        return;
+      }
+
+      throw new Error("Stripe checkout URL not returned.");
+    } catch (err: any) {
+      alert(err.message || "Unable to start checkout.");
+    } finally {
+      setIsBillingLoading(false);
+    }
+  };
+
+  const handleStartTrial = async () => {
+    await startCheckoutForPlan("premium");
+  };
+
+  const handleUpgradeToPro = async () => {
+    await startCheckoutForPlan("pro");
+  };
+
+  const handleManageSubscription = async () => {
+    if (!user) return;
+
+    try {
+      setIsBillingLoading(true);
+
+      const res = await fetch(`${API}/billing/create-portal-session`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": process.env.NEXT_PUBLIC_APP_API_KEY || "",
+        },
+        body: JSON.stringify({
+          user_id: user.id,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data?.detail || data?.message || "Unable to open subscription portal.");
+      }
+
+      if (data?.url) {
+        window.location.href = data.url;
+        return;
+      }
+
+      throw new Error("Stripe portal URL not returned.");
+    } catch (err: any) {
+      alert(err.message || "Unable to open subscription portal.");
+    } finally {
+      setIsBillingLoading(false);
+    }
+  };
+
 
 
   useEffect(() => {
@@ -255,6 +370,30 @@ export default function Home() {
   }, []);
 
 
+  useEffect(() => {
+    if (!user?.id) return;
+  
+    const refreshProfileFromBillingReturn = async () => {
+      const params = new URLSearchParams(window.location.search);
+      const billing = params.get("billing");
+  
+      if (billing) {
+        await fetchProfile(user.id);
+        window.history.replaceState({}, "", window.location.pathname);
+      }
+    };
+  
+    const onFocus = async () => {
+      await fetchProfile(user.id);
+    };
+  
+    refreshProfileFromBillingReturn();
+    window.addEventListener("focus", onFocus);
+  
+    return () => {
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [user?.id]);
 
 
   // SAVE LIBRARY WHEN UPDATED
@@ -1721,7 +1860,7 @@ export default function Home() {
         redirectTo:
           window.location.hostname === "localhost"
             ? "http://localhost:3000/update-password"
-            : "https://examlift.insightxai.com.au/update-password",
+            : "https://grindx.insightxai.com.au/update-password",
       });
   
       if (error) throw error;
@@ -1829,7 +1968,7 @@ export default function Home() {
                 <div className="p-2 bg-white/20 rounded-xl">
                   <GraduationCap className="w-6 h-6" />
                 </div>
-                <span className="text-xl font-bold">ExamLift AI</span>
+                <span className="text-xl font-bold">Grindx AI</span>
               </div>
               <h2 className="text-2xl font-bold">
                 {authMode === "signin" ? "Welcome back" : "Create your account"}
@@ -1851,23 +1990,6 @@ export default function Home() {
                 <GoogleIcon />
                 Continue with Google
               </button>
-
-              {/*
-              <button
-                onClick={() => {
-                  setIsAuthLoading(true);
-                  setTimeout(() => {
-                    setIsAuthLoading(false);
-                    setShowAuthModal(false);
-                  }, 1500);
-                }}
-                disabled={isAuthLoading}
-                className="w-full flex items-center justify-center gap-3 px-4 py-3 border-2 border-gray-200 rounded-xl font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 disabled:opacity-50"
-              >
-                <GoogleIcon />
-                Continue with Google
-              </button>
-              */}
 
               {/* Divider */}
               <div className="flex items-center gap-4 my-6">
@@ -2009,7 +2131,7 @@ export default function Home() {
                 </div>
                 <div>
                   <h1 className="text-xl font-bold bg-gradient-to-r from-blue-700 to-teal-600 bg-clip-text text-transparent">
-                    ExamLift AI
+                    Grindx AI
                   </h1>
                   <p className="text-xs text-gray-500 hidden sm:block">Intelligent Study Assistant</p>
                 </div>
@@ -2170,24 +2292,115 @@ export default function Home() {
               )}
             </div>
 
+
               {user && (
-                <div className="mb-4 rounded-2xl border border-slate-200 bg-white/80 px-4 py-3 shadow-sm">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-400 text-white font-semibold uppercase">
+                <div className="mb-4 rounded-2xl border border-slate-200 bg-white/80 px-4 py-4 shadow-sm">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-400 text-white font-semibold uppercase shrink-0">
                       {(profile?.full_name || profile?.email || user.email || "U").charAt(0)}
                     </div>
-                    <div className="min-w-0">
+              
+                    <div className="min-w-0 flex-1">
                       <div className="truncate text-sm font-semibold text-slate-900">
                         {profile?.full_name || profile?.email || user.email}
                       </div>
-                      <div className="text-xs text-slate-500">
-                        {(profile?.tier || "free").charAt(0).toUpperCase() + (profile?.tier || "free").slice(1)} Plan
+              
+                      <div className="mt-1 text-xs font-medium text-slate-600">
+                        Current plan:{" "}
+                        <span
+                          className={
+                            isProUser
+                              ? "text-violet-600"
+                              : isPremiumUser
+                              ? "text-emerald-600"
+                              : "text-slate-700"
+                          }
+                        >
+                          {isProUser ? "Pro" : isPremiumUser ? "Premium" : "Free"}
+                        </span>
+                      </div>
+              
+                      {profile?.subscription_status === "trialing" && profile?.trial_ends_at && (
+                        <div className="mt-1 text-xs text-amber-600">
+                          Trial ends on {formatPlanDate(profile.trial_ends_at)}
+                        </div>
+                      )}
+              
+                      {hasPaidPlan &&
+                        profile?.subscription_cancel_at_period_end &&
+                        profile?.plan_ends_at && (
+                          <div className="mt-1 text-xs text-orange-600">
+                            Cancels on {formatPlanDate(profile.plan_ends_at)}
+                          </div>
+                        )}
+              
+                      {hasPaidPlan &&
+                        !profile?.subscription_cancel_at_period_end &&
+                        profile?.plan_ends_at && (
+                          <div className="mt-1 text-xs text-slate-500">
+                            Active until {formatPlanDate(profile.plan_ends_at)}
+                          </div>
+                        )}
+              
+                      <div className="mt-3 flex flex-col gap-2">
+                        {!hasPaidPlan && (
+                          <>
+                            <button
+                              onClick={handleStartTrial}
+                              disabled={isBillingLoading}
+                              className="w-full rounded-xl bg-gradient-to-r from-blue-600 to-teal-500 px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-70"
+                            >
+                              {isBillingLoading ? "Please wait..." : "Start 7-Day Free Trial"}
+                            </button>
+              
+                            <button
+                              onClick={handleUpgradeToPro}
+                              disabled={isBillingLoading}
+                              className="w-full rounded-xl border border-violet-300 bg-violet-50 px-3 py-2 text-sm font-semibold text-violet-700 transition hover:bg-violet-100 disabled:cursor-not-allowed disabled:opacity-70"
+                            >
+                              {isBillingLoading ? "Please wait..." : "Upgrade to Pro"}
+                            </button>
+                          </>
+                        )}
+              
+                        {isPremiumUser && (
+                          <>
+                            <button
+                              onClick={handleUpgradeToPro}
+                              disabled={isBillingLoading}
+                              className="w-full rounded-xl border border-violet-300 bg-violet-50 px-3 py-2 text-sm font-semibold text-violet-700 transition hover:bg-violet-100 disabled:cursor-not-allowed disabled:opacity-70"
+                            >
+                              {isBillingLoading ? "Please wait..." : "Upgrade to Pro"}
+                            </button>
+              
+                            <button
+                              onClick={handleManageSubscription}
+                              disabled={isBillingLoading}
+                              className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-70"
+                            >
+                              {isBillingLoading ? "Please wait..." : "Manage Subscription"}
+                            </button>
+                          </>
+                        )}
+              
+                        {isProUser && (
+                          <button
+                            onClick={handleManageSubscription}
+                            disabled={isBillingLoading}
+                            className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-70"
+                          >
+                            {isBillingLoading ? "Please wait..." : "Manage Subscription"}
+                          </button>
+                        )}
+                      </div>
+              
+                      <div className="mt-2 text-[11px] leading-4 text-slate-500">
+                        Cancel anytime. Paid plans stay active until the current trial or billing period ends.
                       </div>
                     </div>
                   </div>
                 </div>
               )}
-
 
           </div>
 
@@ -2214,7 +2427,7 @@ export default function Home() {
                       <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-6 lg:mb-8">
                         Welcome to{" "}
                         <span className="bg-gradient-to-r from-blue-600 to-teal-500 bg-clip-text text-transparent">
-                          Examlift AI
+                          Grindx AI
                         </span>
                       </h1>
                       <p className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-700">
