@@ -2251,16 +2251,28 @@ export default function Home() {
       if (userActiveIdKey) {
         localStorage.removeItem(userActiveIdKey);
       }
-  
+
+      if (userLibraryKey) {
+        localStorage.removeItem(userLibraryKey);
+      }
+
       setShowAuthModal(false);
       setAuthMessage("");
       setShowSidebar(false);
-  
+      setShowPlansModal(false);
+      setShowBillingActions(false);
+      setProfile(null);
+      setUser(null);
+      clearWorkspaceState();
+
       await supabase.auth.signOut();
+
+      window.location.href = "https://grindx.insightxai.com.au";
     } catch (err) {
       console.error("Sign out failed:", err);
     }
   };
+
 
 
   const tabs = [
