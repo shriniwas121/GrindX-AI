@@ -32,14 +32,17 @@ load_dotenv()
 
 app = FastAPI(title="GrindX AI Backend")
 
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # for now (dev)
+    allow_origins=[
+        "http://localhost:3000",
+        "https://grindx.insightxai.com.au",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")
