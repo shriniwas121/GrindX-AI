@@ -3,7 +3,7 @@ import os
 import math
 from fastapi import HTTPException, Request
 import azure.cognitiveservices.speech as speechsdk
-from fastapi.responses import Response
+from fastapi.responses import Response, JSONResponse
 import re
 import os
 from fastapi import Form
@@ -52,6 +52,13 @@ STRIPE_PRICE_ID_PRO = os.getenv("STRIPE_PRICE_ID_PRO", "")
 FRONTEND_BASE_URL = os.getenv("FRONTEND_BASE_URL", "http://localhost:3000")
 
 stripe.api_key = STRIPE_SECRET_KEY
+
+print("=== STRIPE DEBUG START ===")
+print("STRIPE_SECRET_KEY PREFIX:", STRIPE_SECRET_KEY[:8] if STRIPE_SECRET_KEY else "EMPTY")
+print("STRIPE_PRICE_ID_PREMIUM:", STRIPE_PRICE_ID_PREMIUM)
+print("STRIPE_PRICE_ID_PRO:", STRIPE_PRICE_ID_PRO)
+print("FRONTEND_BASE_URL:", FRONTEND_BASE_URL)
+print("=== STRIPE DEBUG END ===")
 
 
 def log_usage_to_supabase(user_id: str, source_type: str, file_name: str | None = None):
@@ -120,6 +127,57 @@ def get_daily_limit_for_tier(tier: str) -> int:
         return 50
     return 5
 
+
+def get_profile_tier(user_id: str) -> str:
+    if not SUPABASE_URL or not SUPABASE_SERVICE_ROLE_KEY or not user_id:
+        return "free"
+
+    headers = {
+        "apikey": SUPABASE_SERVICE_ROLE_KEY,
+        "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}",
+        "Content-Type": "application/json",
+        "Prefer": "return=minimal",
+    }
+
+    try:
+        profile_res = requests.get(
+            f"{SUPABASE_URL}/rest/v1/profiles?id=eq.{user_id}&select=tier",
+            headers=headers,
+            timeout=10,
+        )
+        profile_res.raise_for_status()
+        profile_rows = profile_res.json()
+        return (profile_rows[0].get("tier") or "free").lower() if profile_rows else "free"
+    except Exception as e:
+        print("GET PROFILE TIER ERROR:", str(e))
+        return "free"
+
+
+def get_max_document_size_for_tier(tier: str) -> int:
+    tier = (tier or "free").lower()
+    if tier == "premium":
+        return 15 * 1024 * 1024
+    if tier == "pro":
+        return 30 * 1024 * 1024
+    return 5 * 1024 * 1024
+
+
+def get_max_image_size_for_tier(tier: str) -> int:
+    tier = (tier or "free").lower()
+    if tier == "premium":
+        return 8 * 1024 * 1024
+    if tier == "pro":
+        return 15 * 1024 * 1024
+    return 3 * 1024 * 1024
+
+
+def get_allowed_mock_difficulties_for_tier(tier: str) -> list[str]:
+    tier = (tier or "free").lower()
+    if tier == "premium":
+        return ["easy", "medium"]
+    if tier == "pro":
+        return ["easy", "medium", "hard"]
+    return ["easy"]
 
 def check_upload_limit_in_supabase(user_id: str):
     if not SUPABASE_URL or not SUPABASE_SERVICE_ROLE_KEY or not user_id:
@@ -263,6 +321,104 @@ def check_chat_limit_in_supabase(user_id: str):
         print("SUPABASE CHAT LIMIT CHECK ERROR:", str(e))
         return False, "Could not verify chat limit. Please try again."
 
+
+def log_audio_to_supabase(user_id: str):
+    if not SUPABASE_URL or not SUPABASE_SERVICE_ROLE_KEY or not user_id:
+        return
+
+    headers = {
+        "apikey": SUPABASE_SERVICE_ROLE_KEY,
+        "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}",
+        "Content-Type": "application/json",
+        "Prefer": "return=minimal",
+    }
+
+    today = datetime.now(timezone.utc).date().isoformat()
+
+    try:
+        existing_res = requests.get(
+            f"{SUPABASE_URL}/rest/v1/daily_audio_usage?user_id=eq.{user_id}&usage_date=eq.{today}&select=id,audio_count",
+            headers=headers,
+            timeout=10,
+        )
+        existing_res.raise_for_status()
+        existing = existing_res.json()
+
+        if existing:
+            row = existing[0]
+            requests.patch(
+                f"{SUPABASE_URL}/rest/v1/daily_audio_usage?id=eq.{row['id']}",
+                headers=headers,
+                json={"audio_count": (row.get("audio_count") or 0) + 1},
+                timeout=10,
+            )
+        else:
+            requests.post(
+                f"{SUPABASE_URL}/rest/v1/daily_audio_usage",
+                headers=headers,
+                json={
+                    "user_id": user_id,
+                    "usage_date": today,
+                    "audio_count": 1,
+                },
+                timeout=10,
+            )
+    except Exception as e:
+        print("SUPABASE AUDIO LOG ERROR:", str(e))
+
+
+def get_daily_audio_limit_for_tier(tier: str) -> int:
+    tier = (tier or "free").lower()
+    if tier == "premium":
+        return 30
+    if tier == "pro":
+        return 100
+    return 3
+
+
+def check_audio_limit_in_supabase(user_id: str):
+    if not SUPABASE_URL or not SUPABASE_SERVICE_ROLE_KEY or not user_id:
+        return True, ""
+
+    headers = {
+        "apikey": SUPABASE_SERVICE_ROLE_KEY,
+        "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}",
+        "Content-Type": "application/json",
+        "Prefer": "return=minimal",
+    }
+
+    today = datetime.now(timezone.utc).date().isoformat()
+
+    try:
+        profile_res = requests.get(
+            f"{SUPABASE_URL}/rest/v1/profiles?id=eq.{user_id}&select=tier",
+            headers=headers,
+            timeout=10,
+        )
+        profile_res.raise_for_status()
+        profile_rows = profile_res.json()
+        tier = profile_rows[0]["tier"] if profile_rows and profile_rows[0].get("tier") else "free"
+
+        daily_limit = get_daily_audio_limit_for_tier(tier)
+
+        usage_res = requests.get(
+            f"{SUPABASE_URL}/rest/v1/daily_audio_usage?user_id=eq.{user_id}&usage_date=eq.{today}&select=audio_count",
+            headers=headers,
+            timeout=10,
+        )
+        usage_res.raise_for_status()
+        usage_rows = usage_res.json()
+
+        current_count = usage_rows[0]["audio_count"] if usage_rows and usage_rows[0].get("audio_count") is not None else 0
+
+        if current_count >= daily_limit:
+            return False, f"Daily audio limit reached. Your {tier} plan allows {daily_limit} listens per day."
+
+        return True, ""
+
+    except Exception as e:
+        print("SUPABASE AUDIO LIMIT CHECK ERROR:", str(e))
+        return False, "Could not verify audio limit. Please try again."
 
 def get_supabase_headers():
     return {
@@ -686,22 +842,47 @@ async def create_portal_session(request: Request):
 
     body = await request.json()
     user_id = body.get("user_id", "").strip()
+    action = body.get("action", "").strip().lower()
 
     if not user_id:
         raise HTTPException(status_code=400, detail="Missing user_id")
 
     profile = get_profile_by_user_id(user_id) or {}
     customer_id = profile.get("stripe_customer_id")
+    subscription_id = profile.get("stripe_subscription_id")
 
     if not customer_id:
         raise HTTPException(status_code=400, detail="No Stripe customer found")
 
-    session = stripe.billing_portal.Session.create(
-        customer=customer_id,
-        return_url=FRONTEND_BASE_URL,
-    )
+    if action == "cancel":
+        if not subscription_id:
+            raise HTTPException(status_code=400, detail="No active subscription found")
+
+        session = stripe.billing_portal.Session.create(
+            customer=customer_id,
+            return_url=FRONTEND_BASE_URL,
+            flow_data={
+                "type": "subscription_cancel",
+                "subscription_cancel": {
+                    "subscription": subscription_id,
+                },
+                "after_completion": {
+                    "type": "redirect",
+                    "redirect": {
+                        "return_url": f"{FRONTEND_BASE_URL}?billing=cancelled"
+                    }
+                }
+            },
+        )
+    else:
+        session = stripe.billing_portal.Session.create(
+            customer=customer_id,
+            return_url=FRONTEND_BASE_URL,
+        )
 
     return {"url": session.url}
+
+
 
 
 @app.post("/billing/webhook")
@@ -802,7 +983,20 @@ async def summarize(
 
 
     file_bytes = await file.read()
+
+    tier = get_profile_tier(user_id) if user_id else "free"
+    max_size = get_max_document_size_for_tier(tier)
+
+    if len(file_bytes) > max_size:
+        return {
+            "filename": file.filename,
+            "summary": f"File too large. Your {tier} plan allows up to {max_size // (1024 * 1024)}MB documents.",
+            "document_text": "",
+        }
+
     text = extract_text(file, file_bytes)
+
+
 
     client = get_client()
     deployment_name = os.getenv("AZURE_OPENAI_DEPLOYMENT", "gpt-4o-mini")
@@ -1042,18 +1236,29 @@ def clean_text_for_speech(text: str) -> str:
 @app.post("/speak")
 async def speak(
     text: str = Form(...),
-    language: str = Form("english")
+    language: str = Form("english"),
+    user_id: str = Form("")
 ):
     try:
+        if user_id:
+            allowed, message = check_audio_limit_in_supabase(user_id)
+            if not allowed:
+                return JSONResponse(
+                    status_code=429,
+                    content={"error": message}
+                )
 
         text = clean_text_for_speech(text)
-        text = text[:1500]  # ✅ LIMIT SIZE
+        text = text[:1500]
+
+        if not text:
+            return JSONResponse(
+                status_code=400,
+                content={"error": "No text available for speech."}
+            )
 
         speech_key = os.getenv("AZURE_SPEECH_KEY")
         speech_region = os.getenv("AZURE_SPEECH_REGION")
-
-        print("KEY:", speech_key)
-        print("REGION:", speech_region)
 
         speech_config = speechsdk.SpeechConfig(
             subscription=speech_key,
@@ -1063,30 +1268,36 @@ async def speak(
         voice = get_voice_by_language(language)
         speech_config.speech_synthesis_voice_name = voice
 
-
         synthesizer = speechsdk.SpeechSynthesizer(
             speech_config=speech_config,
-            audio_config=None   # ✅ IMPORTANT
+            audio_config=None
         )
 
         result = synthesizer.speak_text_async(text).get()
 
-        print("RESULT:", result.reason)
-
-        if result.reason == speechsdk.ResultReason.SynthesizingAudioCompleted and result.audio_data:
-            print("AUDIO LENGTH:", len(result.audio_data) if result.audio_data else 0)
-            return Response(
-                content=bytes(result.audio_data),
-                media_type="audio/wav"
+        if result.reason != speechsdk.ResultReason.SynthesizingAudioCompleted:
+            print("Speech error:", result.reason)
+            return JSONResponse(
+                status_code=500,
+                content={"error": "Speech failed"}
             )
-        else:
-            print("ERROR DETAILS:", result.reason)
-            return {"error": "Speech failed"}
 
+        if user_id:
+            log_audio_to_supabase(user_id)
+
+        return Response(
+            content=result.audio_data,
+            media_type="audio/wav"
+        )
 
     except Exception as e:
-        print("EXCEPTION:", str(e))
-        return {"error": str(e)}
+        print("SPEAK ERROR:", str(e))
+        return JSONResponse(
+            status_code=500,
+            content={"error": str(e)}
+        )
+
+
 
 @app.post("/translate-and-speak")
 async def translate_and_speak(
@@ -1427,13 +1638,24 @@ def validate_mock_blocks(raw_text: str) -> str:
 @app.post("/mock-test")
 async def mock_test(
     text: str = Form(...),
-    difficulty: str = Form("medium")
+    difficulty: str = Form("medium"),
+    user_id: str = Form("")
 ):
     client = get_client()
+
 
     difficulty = (difficulty or "medium").strip().lower()
     if difficulty not in ["easy", "medium", "hard"]:
         difficulty = "medium"
+
+    tier = get_profile_tier(user_id) if user_id else "free"
+    allowed_difficulties = get_allowed_mock_difficulties_for_tier(tier)
+
+    if difficulty not in allowed_difficulties:
+        return {
+            "result": "",
+            "error": f"{difficulty.capitalize()} mock tests are not available on your {tier} plan."
+        }
 
     difficulty_rules = {
         "easy": """
@@ -1678,15 +1900,17 @@ async def ocr(
                 }
 
 
-
         file_bytes = await file.read()
 
-        MAX_SIZE = 5 * 1024 * 1024
-        if len(file_bytes) > MAX_SIZE:
+        tier = get_profile_tier(user_id) if user_id else "free"
+        max_size = get_max_image_size_for_tier(tier)
+
+        if len(file_bytes) > max_size:
             raise HTTPException(
                 status_code=400,
-                detail="Image too large (max 5MB)"
+                detail=f"Image too large. Your {tier} plan allows up to {max_size // (1024 * 1024)}MB images."
             )
+
 
         text = extract_text_from_image(file_bytes)
 

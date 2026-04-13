@@ -31,6 +31,18 @@ type LibraryItem = {
   summary: string;
   documentText: string;
   chatHistory: ChatMessage[];
+  conceptsContent?: string;
+  practiceContent?: string;
+  mockContent?: {
+    easy?: string;
+    medium?: string;
+    hard?: string;
+  };
+  mockQuizData?: {
+    easy?: any[];
+    medium?: any[];
+    hard?: any[];
+  };
 };
 
 // Google Icon Component
@@ -112,7 +124,11 @@ export default function Home() {
     subscription_cancel_at_period_end?: boolean | null;
   } | null>(null);
   
+
   const [isBillingLoading, setIsBillingLoading] = useState(false);
+  const [showPlansModal, setShowPlansModal] = useState(false);
+  const [audioLimitMessage, setAudioLimitMessage] = useState("");
+  const [showBillingActions, setShowBillingActions] = useState(false);
 
 
 
@@ -257,6 +273,66 @@ export default function Home() {
   const isPremiumUser = currentTier === "premium";
   const isProUser = currentTier === "pro";
   const hasPaidPlan = isPremiumUser || isProUser;
+  
+  const allowedMockDifficulties =
+    currentTier === "pro"
+      ? ["easy", "medium", "hard"]
+      : currentTier === "premium"
+      ? ["easy", "medium"]
+      : ["easy"];
+  
+  const getMaxDocumentSizeForTier = () => {
+    if (currentTier === "premium") return 15 * 1024 * 1024;
+    if (currentTier === "pro") return 30 * 1024 * 1024;
+    return 5 * 1024 * 1024;
+  };
+  
+  const getMaxImageSizeForTier = () => {
+    if (currentTier === "premium") return 8 * 1024 * 1024;
+    if (currentTier === "pro") return 15 * 1024 * 1024;
+    return 3 * 1024 * 1024;
+  };
+
+  const hasUsedTrial = Boolean(
+    profile?.subscription_status === "trialing" ||
+    profile?.trial_ends_at ||
+    profile?.stripe_customer_id
+  );
+
+  const canShowTrialEntry = !hasUsedTrial && !hasPaidPlan;
+
+
+  const currentPlanLabel = isProUser ? "Pro" : isPremiumUser ? "Premium" : "Free";
+
+  const handlePlanLimitReached = (
+    message: string,
+    kind: "chats" | "uploads" | "listens"
+  ) => {
+    const finalMsg = isProUser
+      ? `${message} Your limit will reset when the next daily cycle starts.`
+      : `${message} Upgrade your plan for more ${kind}.`;
+
+    if (kind === "listens") {
+      setAudioLimitMessage(finalMsg);
+    }
+
+    alert(finalMsg);
+
+    if (!isProUser) {
+      setShowPlansModal(true);
+    }
+  };
+
+  const handlePlanSizeUpgrade = (message: string) => {
+    if (isProUser) {
+      alert(message);
+      return;
+    }
+
+    alert(`${message} Upgrade your plan for larger file limits.`);
+    setShowPlansModal(true);
+  };
+
 
   const startCheckoutForPlan = async (plan: "premium" | "pro") => {
     if (!user) return;
@@ -304,6 +380,7 @@ export default function Home() {
     await startCheckoutForPlan("pro");
   };
 
+
   const handleManageSubscription = async () => {
     if (!user) return;
 
@@ -340,6 +417,43 @@ export default function Home() {
     }
   };
 
+
+  const handleCancelSubscription = async () => {
+    if (!user) return;
+
+    try {
+      setIsBillingLoading(true);
+
+      const res = await fetch(`${API}/billing/create-portal-session`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": process.env.NEXT_PUBLIC_APP_API_KEY || "",
+        },
+        body: JSON.stringify({
+          user_id: user.id,
+          action: "cancel",
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data?.detail || data?.message || "Unable to open cancel flow.");
+      }
+
+      if (data?.url) {
+        window.location.href = data.url;
+        return;
+      }
+
+      throw new Error("Stripe portal URL not returned.");
+    } catch (err: any) {
+      alert(err.message || "Unable to open cancel flow.");
+    } finally {
+      setIsBillingLoading(false);
+    }
+  };
 
 
   useEffect(() => {
@@ -431,11 +545,24 @@ export default function Home() {
       e.preventDefault();
       e.stopPropagation();
   
+
       const blob = imageItem.getAsFile();
       if (!blob) return;
   
       if (!(await requireSignedIn())) return;
-  
+
+
+      const maxSize = getMaxImageSizeForTier();
+      if (blob.size > maxSize) {
+        handlePlanSizeUpgrade(
+          `Image too large. Your ${currentTier} plan allows up to ${Math.floor(
+            maxSize / (1024 * 1024)
+          )}MB images.`
+        );
+        return;
+      }
+
+ 
       const usage = await checkAndConsumeUpload("screenshot", "Screenshot");
       if (!usage.allowed) {
         alert(usage.message);
@@ -482,11 +609,23 @@ export default function Home() {
           throw new Error(errorText);
         }
   
+
         const summaryData = await summaryRes.json();
-  
+
+        if (
+          typeof summaryData?.summary === "string" &&
+          summaryData.summary.toLowerCase().includes("daily limit reached")
+        ) {
+          handlePlanLimitReached(summaryData.summary, "uploads");
+          return;
+        }
+
         if (!alive) return;
-  
+
         const safeSummary = summaryData.summary || "No summary available";
+
+
+
         const safeText = extractedText;
   
         const newItem: LibraryItem = {
@@ -522,6 +661,7 @@ export default function Home() {
         setCurrentQ(0);
         setChatLanguage("english");
         setTabLanguage("english");
+        setShowSidebar(false);
       } catch (err) {
         console.error(err);
         if (alive) {
@@ -540,7 +680,7 @@ export default function Home() {
       alive = false;
       window.removeEventListener("paste", handlePaste);
     };
-  }, [API, user]);
+  }, [API, user, currentTier]);
 
 
 
@@ -642,14 +782,11 @@ export default function Home() {
   };
 
 
-
-
-
-
   const handleUploadButtonClick = async () => {
     if (!(await requireSignedIn())) return;
   
     resetCurrentDocumentView();
+    setShowSidebar(false);
     document.getElementById("fileUpload")?.click();
   };
 
@@ -658,10 +795,27 @@ export default function Home() {
     try {
       if (!(await requireSignedIn())) return;
   
+
+
       const file = e.target.files?.[0];
       if (!file) return;
+
+
+      const maxSize = getMaxDocumentSizeForTier();
+      if (file.size > maxSize) {
+        handlePlanSizeUpgrade(
+          `File too large. Your ${currentTier} plan allows up to ${Math.floor(
+            maxSize / (1024 * 1024)
+          )}MB documents.`
+        );
+        if (e?.target) {
+          e.target.value = "";
+        }
+        return;
+      }
   
       resetCurrentDocumentView();
+
   
       const usage = await checkAndConsumeUpload("file", file.name);
       if (!usage.allowed) {
@@ -683,11 +837,21 @@ export default function Home() {
   
       if (!res.ok) throw new Error("Upload failed");
   
+
       const data = await res.json();
-  
+
+      if (
+        typeof data?.summary === "string" &&
+        data.summary.toLowerCase().includes("daily limit reached")
+      ) {
+        handlePlanLimitReached(data.summary, "uploads");
+        return;
+      }
+
       setFileName(data.filename);
       setDocumentText(data.document_text);
       setSummary(data.summary);
+
   
       const newItem: LibraryItem = {
         id: crypto.randomUUID(),
@@ -709,6 +873,9 @@ export default function Home() {
       setActiveId(newItem.id);
       setQuestion("");
       setStreamingText("");
+      setActiveTab("chat");
+      setShowSidebar(false);
+
     } catch (err) {
       console.error(err);
       alert("Upload failed");
@@ -765,11 +932,21 @@ export default function Home() {
         const errorText = await res.text();
         throw new Error(errorText);
       }
-  
+
+
       const data = await res.json();
-  
+
+      if (
+        typeof data?.summary === "string" &&
+        data.summary.toLowerCase().includes("daily limit reached")
+      ) {
+        handlePlanLimitReached(data.summary, "uploads");
+        return;
+      }
+
       const safeSummary =
-        data.summary || data.document_text || data.text || data.transcript || data.content || "No summary available";
+        data.summary || data.document_text || data.text || data.transcript || data.content || "No summary available";  
+
   
       const safeText =
         data.document_text || data.text || data.transcript || data.content || "";
@@ -808,6 +985,8 @@ export default function Home() {
       setChatLanguage("english");
       setTabLanguage("english");
       setUrlInput("");
+      setShowSidebar(false);
+
     } catch (err) {
       console.error(err);
       setSummary("URL analysis failed. Check backend terminal.");
@@ -816,148 +995,6 @@ export default function Home() {
     }
   };
 
-  {/*
-  const handleUrlAnalyze = async (incomingUrl?: string) => {
-    console.log("handleUrlAnalyze START", {
-      incomingUrl,
-      urlInput,
-      isUploading,
-      hasUser: !!user,
-      API,
-    });
-  
-    clearPendingUploadState();
-  
-    try {
-      if (!(await requireSignedIn())) {
-        console.log("handleUrlAnalyze EXIT: requireSignedIn false");
-        return;
-      }
-      console.log("handleUrlAnalyze AFTER requireSignedIn");
-  
-      const finalUrl = (incomingUrl || urlInput).trim();
-      console.log("handleUrlAnalyze finalUrl:", finalUrl);
-  
-      if (!finalUrl) {
-        console.log("handleUrlAnalyze EXIT: finalUrl empty");
-        return;
-      }
-  
-      const usage = await checkAndConsumeUpload("url", finalUrl);
-      console.log("handleUrlAnalyze usage:", usage);
-  
-      if (!usage.allowed) {
-        alert(usage.message);
-        return;
-      }
-  
-      resetCurrentDocumentView();
-      setIsUploading(true);
-      setAnswer("");
-      setQuestion("");
-      setStreamingText("");
-      setUrlInput("");
-  
-      const formData = new FormData();
-      let endpoint = "";
-      let type: LibraryItem["type"] = "WEB";
-  
-      if (finalUrl.includes("youtube.com") || finalUrl.includes("youtu.be")) {
-        formData.append("video_url", finalUrl);
-        endpoint = `${API}/summarize-video`;
-        type = "VIDEO";
-      } else {
-        formData.append("website_url", finalUrl);
-        endpoint = `${API}/summarize-website`;
-        type = "WEB";
-      }
-  
-      const controller = new AbortController();
-      uploadAbortRef.current = controller;
-  
-      const timeoutId = window.setTimeout(() => controller.abort(), 15000);
-  
-      let res: Response;
-  
-      try {
-        res = await fetch(endpoint, {
-          method: "POST",
-          body: formData,
-          signal: controller.signal,
-        });
-      } finally {
-        clearTimeout(timeoutId);
-      }
-  
-      if (!res.ok) {
-        const errorText = await res.text();
-        throw new Error(errorText || "Failed to analyze URL");
-      }
-  
-      const data = await res.json();
-  
-      if (!data || (!data.summary && !data.document_text && !data.text && !data.transcript && !data.content)) {
-        throw new Error("Empty URL response");
-      }
-  
-      const safeSummary =
-        data.summary || data.document_text || data.text || data.transcript || data.content || "No summary available";
-      const safeText =
-        data.document_text || data.text || data.transcript || data.content || "";
-  
-      const newItem: LibraryItem = {
-        id: crypto.randomUUID(),
-        name: finalUrl.length > 60 ? finalUrl.substring(0, 57) + "..." : finalUrl,
-        type,
-        status: "Analyzed",
-        summary: safeSummary,
-        documentText: safeText,
-        chatHistory: [
-          {
-            role: "assistant",
-            content: `Here's a quick overview:\n\n${safeSummary}`,
-            sourceType: "document",
-          },
-        ],
-      };
-  
-      setLibrary((prev) => [newItem, ...prev]);
-      setActiveId(newItem.id);
-      setFileName(data.filename || finalUrl);
-      setSummary(safeSummary);
-      setDocumentText(safeText);
-      setActiveTab("chat");
-      setTabContent("");
-      setTranslatedTabContent("");
-      setQuizData([]);
-      setQuizAnswers({});
-      setQuizScore(null);
-      setCurrentQ(0);
-      setChatLanguage("english");
-      setTabLanguage("english");
-      setQuestion("");
-      setAnswer("");
-      setStreamingText("");
-      setUrlInput("");
-    } catch (err: any) {
-      console.error("handleUrlAnalyze failed:", err);
-  
-      if (err?.name === "AbortError") {
-        setSummary("URL analysis timed out. Please try again.");
-      } else {
-        setSummary("URL analysis failed. Check backend terminal.");
-      }
-  
-      setQuestion("");
-      setAnswer("");
-      setStreamingText("");
-      setUrlInput("");
-    } finally {
-      uploadAbortRef.current = null;
-      setIsUploading(false);
-    }
-  };
-  */}
 
 
   const handlePasteAnalyze = async (inputText?: string) => {
@@ -986,7 +1023,16 @@ export default function Home() {
         body: formData,
       });
   
+
       const data = await res.json();
+
+      if (
+        typeof data?.summary === "string" &&
+        data.summary.toLowerCase().includes("daily limit reached")
+      ) {
+        handlePlanLimitReached(data.summary, "uploads");
+        return;
+      }
   
       const newItem: LibraryItem = {
         id: crypto.randomUUID(),
@@ -1007,6 +1053,9 @@ export default function Home() {
       setLibrary((prev) => [newItem, ...prev]);
       setActiveId(newItem.id);
       setPastedText("");
+      setActiveTab("chat");
+      setShowSidebar(false);
+
     } catch (err) {
       console.error(err);
     } finally {
@@ -1019,10 +1068,26 @@ export default function Home() {
     try {
       if (!(await requireSignedIn())) return;
   
+
       const file = e.target.files?.[0];
       if (!file) return;
+
+
+      const maxSize = getMaxImageSizeForTier();
+      if (file.size > maxSize) {
+        handlePlanSizeUpgrade(
+          `Image too large. Your ${currentTier} plan allows up to ${Math.floor(
+            maxSize / (1024 * 1024)
+          )}MB images.`
+        );
+        if (e?.target) {
+          e.target.value = "";
+        }
+        return;
+      }
   
       resetCurrentDocumentView();
+
   
       const usage = await checkAndConsumeUpload("camera", file.name || "Captured Image");
       if (!usage.allowed) {
@@ -1046,11 +1111,23 @@ export default function Home() {
         const errorText = await res.text();
         throw new Error(errorText);
       }
-  
+ 
+ 
+
       const data = await res.json();
-  
+
+      if (
+        typeof data?.summary === "string" &&
+        data.summary.toLowerCase().includes("daily limit reached")
+      ) {
+        handlePlanLimitReached(data.summary, "uploads");
+        return;
+      }
+
       const safeSummary =
         data.summary || data.document_text || data.text || "No readable text found. Try clearer image.";
+
+
   
       const safeText =
         data.document_text || data.text || "No text found";
@@ -1080,6 +1157,9 @@ export default function Home() {
       setQuestion("");
       setAnswer("");
       setStreamingText("");
+      setActiveTab("chat");
+      setShowSidebar(false);
+
     } catch (err) {
       console.error(err);
       alert("Image processing failed");
@@ -1141,18 +1221,26 @@ export default function Home() {
       if (!activeId) {
         return;
       }
-  
+ 
+
       const activeItem = activeId
         ? library.find((item) => item.id === activeId)
         : null;
   
       const isGeneralChat = !activeId;
   
-      if (!isGeneralChat && activeTab !== "chat" && activeTab !== "practice") {
-        alert("Questions are only supported in Chat and Practice tabs.");
+      if (isGeneralChat) {
+        setIsAsking(false);
         return;
       }
   
+      if (activeTab !== "chat" && activeTab !== "practice") {
+        alert("Questions are only supported in Chat and Practice tabs.");
+        setIsAsking(false);
+        return;
+      }
+
+
       if (activeId) {
         setLibrary((prev) =>
           prev.map((item) =>
@@ -1202,7 +1290,7 @@ export default function Home() {
       const res = await fetch(`${API}/ask`, {
         method: "POST",
         headers: {
-          "x-api-key": process.env.NEXT_PUBLIC_API_KEY!,
+          "x-api-key": process.env.NEXT_PUBLIC_APP_API_KEY || "",
         },
         body: formData,
       });
@@ -1212,10 +1300,22 @@ export default function Home() {
         throw new Error(errorText);
       }
   
+
+
       const data = await res.json();
-  
+
+      if (
+        typeof data?.answer === "string" &&
+        data.answer.toLowerCase().includes("daily chat limit reached")
+      ) {
+        handlePlanLimitReached(data.answer, "chats");
+        return;
+      }
+
       const fullText = data.answer;
       const sourceType = data.source_type || "none";
+
+
   
       setStreamingText("");
       setIsStreaming(true);
@@ -1264,20 +1364,31 @@ export default function Home() {
       }, 20);
   
       setQuestion("");
-    } catch (err) {
+
+
+    } catch (err: any) {
       console.error(err);
-      setAnswer("Question failed. Check backend.");
+
+      const msg = err?.message || "Question failed. Check backend.";
+
+      if (msg.toLowerCase().includes("daily chat limit reached")) {
+        handlePlanLimitReached(msg, "chats");
+      } else {
+        alert(msg);
+      }
     } finally {
       setIsAsking(false);
     }
+
+
   };
+
 
 
   const handleTabClick = async (
     tab: any,
     selectedDifficulty?: "easy" | "medium" | "hard"
   ) => {
-
     if (tabAudio) {
       tabAudio.pause();
       tabAudio.currentTime = 0;
@@ -1293,17 +1404,68 @@ export default function Home() {
     const activeItem = library.find((i) => i.id === activeId);
     if (!activeItem) return;
   
+    let difficulty = selectedDifficulty || mockDifficulty;
+
+    if (!allowedMockDifficulties.includes(difficulty)) {
+      difficulty = "easy";
+      setMockDifficulty("easy");
+    }    
+  
+    // ---------- CACHE CHECK START ----------
+    if (tab === "summary" && activeItem.summary?.trim()) {
+      setTabContent(activeItem.summary);
+      setQuizData([]);
+      setQuizAnswers({});
+      setQuizScore(null);
+      setCurrentQ(0);
+      return;
+    }
+  
+    if (tab === "concepts" && activeItem.conceptsContent?.trim()) {
+      setTabContent(activeItem.conceptsContent);
+      setQuizData([]);
+      setQuizAnswers({});
+      setQuizScore(null);
+      setCurrentQ(0);
+      return;
+    }
+  
+    if (tab === "practice" && activeItem.practiceContent?.trim()) {
+      setTabContent(activeItem.practiceContent);
+      setQuizData([]);
+      setQuizAnswers({});
+      setQuizScore(null);
+      setCurrentQ(0);
+      return;
+    }
+  
+    if (tab === "mock") {
+      const savedQuiz = activeItem.mockQuizData?.[difficulty];
+      if (savedQuiz && savedQuiz.length > 0) {
+        setQuizData(savedQuiz);
+        setQuizAnswers({});
+        setQuizScore(null);
+        setCurrentQ(0);
+        setTabContent(activeItem.mockContent?.[difficulty] || "");
+        return;
+      }
+    }
+    // ---------- CACHE CHECK END ----------
+  
     setIsTabLoading(true);
     setTabContent("");
   
     try {
+
       const formData = new FormData();
       formData.append("text", activeItem.documentText);
-      
+      formData.append("user_id", user?.id || "");
+
       if (tab === "mock") {
-        formData.append("difficulty", selectedDifficulty || mockDifficulty);
+        formData.append("difficulty", difficulty);
       }
 
+  
       let endpoint = "";
   
       if (tab === "summary") endpoint = `${API}/summarize-text`;
@@ -1317,71 +1479,116 @@ export default function Home() {
       });
   
       const data = await res.json();
+      if (data?.error) {
+        throw new Error(data.error);
+      }
+
       let content = data.result || data.content || data.text || data.summary || "";
   
 
       if (tab === "practice") {
         let qNum = 0;
-      
-        content = content
+        let currentLabel = "";
+
+        const lines = content
           .split("\n")
-          .map((line: string) => {
-            const trimmed = line.trim();
-      
-            if (!trimmed) return line;
-      
-            const isQuestionLine =
-              /^\*\*[^*\n]+:\*\*/.test(trimmed) || /^[A-Za-z][A-Za-z\s\-&()]+:/.test(trimmed);
-      
-            const isSectionHeading =
-              /^conceptual questions:?$/i.test(trimmed) ||
-              /^application questions:?$/i.test(trimmed) ||
-              /^practice questions:?$/i.test(trimmed);
-      
-            if (isQuestionLine && !isSectionHeading) {
-              qNum += 1;
-              return `Q${qNum}. ${line}`;
-            }
-      
-            return line;
-          })
-          .join("\n");
+          .map((line: string) => line.trim())
+          .filter(Boolean);
+
+        const formatted: string[] = [];
+
+        for (const line of lines) {
+          const isMainHeading = /^practice questions on /i.test(line);
+
+          const isSectionHeading =
+            /^conceptual questions:?$/i.test(line) ||
+            /^application questions:?$/i.test(line) ||
+            /^scenario questions:?$/i.test(line) ||
+            /^practice questions:?$/i.test(line);
+
+          const labelMatch = line.match(/^([A-Za-z][A-Za-z\s\-&()]+):\s*(.+)$/);
+
+          if (isMainHeading) {
+            formatted.push(`**${line}**`, "");
+            currentLabel = "";
+            continue;
+          }
+
+          if (isSectionHeading) {
+            formatted.push(`**${line.replace(/:$/, "")}**`, "");
+            currentLabel = "";
+            continue;
+          }
+
+          if (labelMatch) {
+            const label = labelMatch[1].trim();
+            const questionText = labelMatch[2].trim();
+
+            qNum += 1;
+            currentLabel = label;
+
+            formatted.push(`${qNum}. **${label}**`, "");
+            formatted.push(questionText, "");
+            continue;
+          }
+
+          const looksLikeQuestion =
+            line.endsWith("?") ||
+            /determine|describe|explain|discuss|imagine|what|which|how|why/i.test(line);
+
+          if (looksLikeQuestion) {
+            qNum += 1;
+
+            formatted.push(
+              currentLabel
+                ? `${qNum}. **${currentLabel}**`
+                : `${qNum}. **Question ${qNum}**`,
+              ""
+            );
+            formatted.push(line, "");
+            currentLabel = "";
+            continue;
+          }
+
+          formatted.push(line, "");
+        }
+
+        content = formatted.join("\n").replace(/\n{3,}/g, "\n\n").trim();
       }
 
 
+ 
+  
       if (tab === "concepts") {
         const lines = content
           .split("\n")
           .map((line: string) => line.trim())
           .filter(Boolean)
           .map((line: string) => line.replace(/^[-•]\s*/, "").trim());
-      
+  
         const formatted: string[] = [];
-      
+  
         for (let i = 0; i < lines.length; i += 2) {
           const heading = lines[i];
           const description = lines[i + 1];
-      
+  
           if (!heading) continue;
-      
+  
           if (formatted.length > 0) {
             formatted.push("");
           }
-      
+  
           formatted.push(`**${heading}**`);
           formatted.push("");
-      
+  
           if (description) {
             formatted.push(description);
             formatted.push("");
           }
         }
-      
+  
         content = formatted.join("\n").replace(/\n{3,}/g, "\n\n").trim();
       }
-
-
-
   
       if (tab === "mock") {
         const questions = content.split(/\n(?=Question:)/);
@@ -1442,17 +1649,14 @@ export default function Home() {
             return null;
           }
   
-
           return {
             question,
             options,
             correctAnswer: newAnswerIndex,
             explanation,
           };
-
         });
   
-
         const cleaned = parsed.filter(
           (q: any) =>
             q &&
@@ -1463,8 +1667,7 @@ export default function Home() {
             q.correctAnswer >= 0 &&
             q.correctAnswer < 4
         );
-
-
+  
         setQuizData(cleaned);
         setQuizAnswers({});
         setQuizScore(null);
@@ -1472,13 +1675,50 @@ export default function Home() {
         setChatLanguage("english");
         setTabContent("");
         setTranslatedTabContent("");
-
+  
+        setLibrary((prev) =>
+          prev.map((item) =>
+            item.id === activeId
+              ? {
+                  ...item,
+                  mockContent: {
+                    ...item.mockContent,
+                    [difficulty]: content,
+                  },
+                  mockQuizData: {
+                    ...item.mockQuizData,
+                    [difficulty]: cleaned,
+                  },
+                }
+              : item
+          )
+        );
       } else {
         setTabContent(content);
         setQuizData([]);
         setQuizScore(null);
         setCurrentQ(0);
         setQuizAnswers({});
+  
+        setLibrary((prev) =>
+          prev.map((item) => {
+            if (item.id !== activeId) return item;
+  
+            if (tab === "summary") {
+              return { ...item, summary: content };
+            }
+  
+            if (tab === "concepts") {
+              return { ...item, conceptsContent: content };
+            }
+  
+            if (tab === "practice") {
+              return { ...item, practiceContent: content };
+            }
+  
+            return item;
+          })
+        );
       }
     } catch (err) {
       console.error(err);
@@ -1487,6 +1727,8 @@ export default function Home() {
       setIsTabLoading(false);
     }
   };
+
+
 
 
   const handleLanguageChange = (language: string) => {
@@ -1620,6 +1862,10 @@ export default function Home() {
 
 
   const handleSpeakTab = async () => {
+    if (!(await requireSignedIn())) return;
+
+    setAudioLimitMessage("");
+
     if (isTabSpeaking && tabAudio) {
       tabAudio.pause();
       tabAudio.currentTime = 0;
@@ -1627,101 +1873,173 @@ export default function Home() {
       setIsTabSpeaking(false);
       return;
     }
-  
+
     let textToSpeak = "";
-  
+
     if (activeTab === "mock") {
       const q = quizData[currentQ] || {};
-      textToSpeak = translatedTabContent || `${q.question || ""}\n${(q.options || []).join("\n")}`;
+      textToSpeak =
+        translatedTabContent || `${q.question || ""}\n${(q.options || []).join("\n")}`;
     } else {
       textToSpeak = translatedTabContent || tabContent;
     }
-  
-    if (!textToSpeak) return;
-  
+
+    if (!textToSpeak?.trim()) return;
+
     setIsAudioLoading(true);
-  
+
     try {
       const formData = new FormData();
       formData.append("text", textToSpeak);
       formData.append("language", tabLanguage);
-  
+      formData.append("user_id", user?.id || "");
+
       const res = await fetch(`${API}/speak`, {
         method: "POST",
         body: formData,
       });
-  
+
+      const contentType = res.headers.get("content-type") || "";
+
+      if (!res.ok || contentType.includes("application/json")) {
+        const errorData = await res.json().catch(() => null);
+        throw new Error(
+          errorData?.error || errorData?.detail || "Unable to generate audio."
+        );
+      }
+
       const audioBlob = await res.blob();
       const audioUrl = URL.createObjectURL(audioBlob);
       const newAudio = new Audio(audioUrl);
-  
+
       newAudio.onended = () => {
         setIsTabSpeaking(false);
         setTabAudio(null);
         URL.revokeObjectURL(audioUrl);
       };
-  
+
       await newAudio.play();
       setTabAudio(newAudio);
       setIsTabSpeaking(true);
-    } catch (err) {
+      setAudioLimitMessage("");
+    } catch (err: any) {
       console.error(err);
+
+      const msg = err?.message || "Audio playback failed.";
+
+
+      if (msg.toLowerCase().includes("daily audio limit reached")) {
+        const finalMsg = isProUser
+          ? `${msg} Your audio limit will reset when the next daily cycle starts.`
+          : `${msg} Upgrade your plan for more listens.`;
+
+        setAudioLimitMessage(finalMsg);
+        alert(finalMsg);
+
+        if (!isProUser) {
+          setShowPlansModal(true);
+        }
+      } else {
+        alert(msg);
+      }
+
+
     } finally {
       setIsAudioLoading(false);
     }
   };
 
 
+
   const handleSpeakChat = async (idx: number, text: string) => {
+    if (!(await requireSignedIn())) return;
+
+    setAudioLimitMessage("");
+
     const currentAudioId = `${activeId}-${idx}`;
-  
+
     if (chatAudio) {
       chatAudio.pause();
       chatAudio.currentTime = 0;
       setChatAudio(null);
       setActiveAudioId(null);
     }
-  
+
     if (activeAudioId === currentAudioId) {
       setActiveAudioId(null);
       setLoadingChatAudioId(null);
       return;
     }
-  
+
+    if (!text?.trim()) return;
+
     setIsLoadingAudio(true);
     setLoadingChatAudioId(currentAudioId);
-  
+
     try {
       const formData = new FormData();
       formData.append("text", text);
       formData.append("language", chatLanguage);
-  
+      formData.append("user_id", user?.id || "");
+
       const res = await fetch(`${API}/speak`, {
         method: "POST",
         body: formData,
       });
-  
+
+      const contentType = res.headers.get("content-type") || "";
+
+      if (!res.ok || contentType.includes("application/json")) {
+        const errorData = await res.json().catch(() => null);
+        throw new Error(
+          errorData?.error || errorData?.detail || "Unable to generate audio."
+        );
+      }
+
       const audioBlob = await res.blob();
       const audioUrl = URL.createObjectURL(audioBlob);
       const newAudio = new Audio(audioUrl);
-  
+
       newAudio.onended = () => {
         setActiveAudioId(null);
         setChatAudio(null);
         setLoadingChatAudioId(null);
         URL.revokeObjectURL(audioUrl);
       };
-  
+
       await newAudio.play();
       setChatAudio(newAudio);
       setActiveAudioId(currentAudioId);
-    } catch (err) {
+      setAudioLimitMessage("");
+    } catch (err: any) {
       console.error(err);
+
+      const msg = err?.message || "Audio playback failed.";
+
+
+      if (msg.toLowerCase().includes("daily audio limit reached")) {
+        const finalMsg = isProUser
+          ? `${msg} Your audio limit will reset when the next daily cycle starts.`
+          : `${msg} Upgrade your plan for more listens.`;
+
+        setAudioLimitMessage(finalMsg);
+        alert(finalMsg);
+
+        if (!isProUser) {
+          setShowPlansModal(true);
+        }
+      } else {
+        alert(msg);
+      }
+
+
+
     } finally {
       setIsLoadingAudio(false);
       setLoadingChatAudioId(null);
     }
   };
+
 
 
 
@@ -1747,6 +2065,7 @@ export default function Home() {
     recognition.start();
   };
 
+
   const handleSelectItem = (item: LibraryItem) => {
     setActiveId(item.id);
     setFileName(item.name);
@@ -1758,7 +2077,7 @@ export default function Home() {
     setActiveTab("chat");
     setTabContent("");
     setTranslatedTabContent("");
-    setQuizData([]);
+    setQuizData(item.mockQuizData?.[mockDifficulty] || []);
     setQuizAnswers({});
     setQuizScore(null);
     setCurrentQ(0);
@@ -1766,6 +2085,8 @@ export default function Home() {
     setTabLanguage("english");
     setShowSidebar(false);
   };
+
+
 
   const handleDeleteItem = (id: string) => {
     setLibrary(prev => prev.filter(item => item.id !== id));
@@ -1951,7 +2272,222 @@ export default function Home() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-teal-50/20">
+    <div
+      className="min-h-screen bg-slate-50 text-slate-900"
+      style={{ colorScheme: "light" }}
+    >
+
+
+      {/* Plans Modal */}
+      {showPlansModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+          <div className="relative w-full max-w-5xl rounded-3xl bg-white shadow-2xl overflow-hidden">
+
+            <button
+              onClick={() => setShowPlansModal(false)}
+              className="absolute right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/15 text-white shadow-sm ring-1 ring-white/30 transition hover:bg-white/25 hover:text-white"
+              aria-label="Close plans modal"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+
+            <div className="border-b border-slate-200 bg-gradient-to-r from-blue-600 via-blue-700 to-teal-600 px-6 py-6 text-white md:px-8">
+              <div className="flex items-center gap-3">
+                <div className="rounded-2xl bg-white/15 p-2">
+                  <Sparkles className="h-5 w-5" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold">Choose your plan</h2>
+                  <p className="mt-1 text-sm text-blue-100">
+                    Start free, upgrade only when you need more power.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid gap-5 p-6 md:grid-cols-3 md:p-8">
+              {/* Free */}
+              <div className="flex flex-col rounded-2xl border border-slate-200 bg-slate-50/70 p-5">
+                <div className="mb-4">
+                  <div className="text-sm font-semibold text-slate-500">Free</div>
+                  <div className="mt-2 text-3xl font-bold text-slate-900">$0</div>
+                  <div className="mt-1 text-sm text-slate-500">Good for getting started</div>
+                </div>
+
+                <div className="space-y-2 text-sm text-slate-700">
+                  <div>• 5 uploads per day</div>
+                  <div>• 15 prompts per day</div>
+                  <div>• 3 listens per day</div>
+                  <div>• Up to 5MB documents</div>
+                  <div>• Up to 3MB camera/screenshot</div>
+                  <div>• Summary</div>
+                  <div>• Key Concepts</div>
+                  <div>• Practice Questions</div>
+                  <div>• Easy Mock Test only</div>
+                </div>
+
+                <div className="mt-6">
+                  {currentTier === "free" ? (
+                    <button
+                      disabled
+                      className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-500"
+                    >
+                      Current Plan
+                    </button>
+                  ) : (
+                    <button
+                      disabled
+                      className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-400"
+                    >
+                      Free Plan
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Premium */}
+              <div className="relative flex flex-col rounded-2xl border-2 border-emerald-500 bg-white p-5 shadow-sm">
+                <div className="absolute -top-3 left-5 rounded-full bg-emerald-500 px-3 py-1 text-xs font-semibold text-white">
+                  Most Popular
+                </div>
+
+                <div className="mb-4">
+                  <div className="text-sm font-semibold text-emerald-600">Premium</div>
+                  <div className="mt-2 text-3xl font-bold text-slate-900">$5.99</div>
+                  <div className="mt-1 text-sm text-slate-500">per month</div>
+                </div>
+
+
+                <div className="space-y-2 text-sm text-slate-700">
+                  <div>• 15 uploads per day</div>
+                  <div>• 100 prompts per day</div>
+                  <div>• 30 listens per day</div>
+                  <div>• Up to 15MB documents</div>
+                  <div>• Up to 8MB camera/screenshot</div>
+                  <div>• Summary</div>
+                  <div>• Key Concepts</div>
+                  <div>• Practice Questions</div>
+                  <div>• Easy + Medium Mock Test</div>
+                  <div>• Faster study flow</div>
+                </div>
+
+
+                <div className="mt-6">
+
+                  {isPremiumUser ? (
+                    <div className="space-y-2">
+                      <button
+                        onClick={handleManageSubscription}
+                        disabled={isBillingLoading}
+                        className="w-full rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-70"
+                      >
+                        {isBillingLoading ? "Please wait..." : "Manage Subscription"}
+                      </button>
+
+                      <button
+                        onClick={handleCancelSubscription}
+                        disabled={isBillingLoading}
+                        className="w-full rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-70"
+                      >
+                        {isBillingLoading ? "Please wait..." : "Cancel Subscription"}
+                      </button>
+                    </div>
+                  ) : isProUser ? (
+
+                    <button
+                      disabled
+                      className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-500"
+                    >
+                      Included Below Current Plan
+                    </button>
+                  ) : canShowTrialEntry ? (
+                    <button
+                      onClick={handleStartTrial}
+                      disabled={isBillingLoading}
+                      className="w-full rounded-xl bg-gradient-to-r from-blue-600 to-teal-500 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-70"
+                    >
+                      {isBillingLoading ? "Please wait..." : "Start 7-Day Free Trial"}
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => startCheckoutForPlan("premium")}
+                      disabled={isBillingLoading}
+                      className="w-full rounded-xl bg-gradient-to-r from-blue-600 to-teal-500 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-70"
+                    >
+                      {isBillingLoading ? "Please wait..." : "Get Premium"}
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Pro */}
+              <div className="flex flex-col rounded-2xl border border-violet-200 bg-violet-50/40 p-5">
+                <div className="mb-4">
+                  <div className="text-sm font-semibold text-violet-600">Pro</div>
+                  <div className="mt-2 text-3xl font-bold text-slate-900">$14.99</div>
+                  <div className="mt-1 text-sm text-slate-500">per month</div>
+                </div>
+
+                <div className="space-y-2 text-sm text-slate-700">
+                  <div>• 50 uploads per day</div>
+                  <div>• 500 prompts per day</div>
+                  <div>• 100 listens per day</div>
+                  <div>• Up to 30MB documents</div>
+                  <div>• Up to 15MB camera/screenshot</div>
+                  <div>• Summary</div>
+                  <div>• Key Concepts</div>
+                  <div>• Practice Questions</div>
+                  <div>• Easy + Medium + Hard Mock Test</div>
+                  <div>• Highest usage limits</div>
+                </div>
+
+                <div className="mt-6">
+
+
+                  {isProUser ? (
+                    <div className="space-y-2">
+                      <button
+                        onClick={handleManageSubscription}
+                        disabled={isBillingLoading}
+                        className="w-full rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-70"
+                      >
+                        {isBillingLoading ? "Please wait..." : "Manage Subscription"}
+                      </button>
+
+                      <button
+                        onClick={handleCancelSubscription}
+                        disabled={isBillingLoading}
+                        className="w-full rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-70"
+                      >
+                        {isBillingLoading ? "Please wait..." : "Cancel Subscription"}
+                      </button>
+                    </div>
+                  ) : (
+
+                    <button
+                      onClick={handleUpgradeToPro}
+                      disabled={isBillingLoading}
+                      className="w-full rounded-xl border border-violet-300 bg-violet-100 px-4 py-3 text-sm font-semibold text-violet-700 transition hover:bg-violet-200 disabled:cursor-not-allowed disabled:opacity-70"
+                    >
+                      {isBillingLoading ? "Please wait..." : "Upgrade to Pro"}
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="border-t border-slate-200 bg-slate-50 px-6 py-4 text-center text-xs text-slate-500 md:px-8">
+              Cancel anytime. Paid plans stay active until the current billing period ends.
+            </div>
+          </div>
+        </div>
+      )}
+
+
+
+
+
       {/* Auth Modal */}
       {showAuthModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
@@ -2115,8 +2651,8 @@ export default function Home() {
 
       {/* Header */}
       <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-gray-200/50 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
+        <div className="max-w-7xl mx-auto px-3 sm:px-5 lg:px-8">
+          <div className="flex items-center justify-between h-16 gap-3">
             {/* Left: Menu + Logo */}
             <div className="flex items-center gap-3">
               <button
@@ -2141,9 +2677,9 @@ export default function Home() {
 
             {/* Center: Document Name */}
             {activeItem && (
-              <div className="hidden md:flex items-center gap-2 px-4 py-1.5 bg-gradient-to-r from-blue-50 to-teal-50 border border-blue-100 rounded-full">
+              <div className="hidden md:flex min-w-0 items-center gap-2 px-4 py-1.5 bg-gradient-to-r from-blue-50 to-teal-50 border border-blue-100 rounded-full">
                 <FileText className="w-4 h-4 text-blue-600" />
-                <span className="text-sm font-medium text-blue-700 max-w-[200px] truncate">
+                <span className="text-sm font-medium text-blue-700 max-w-[160px] lg:max-w-[220px] truncate">
                   {activeItem.name}
                 </span>
               </div>
@@ -2189,10 +2725,11 @@ export default function Home() {
         {/* Sidebar */}
         <aside
           className={cn(
-            "fixed lg:sticky top-16 left-0 z-50 lg:z-30 w-72 h-[calc(100vh-4rem)] bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out",
+            "fixed lg:sticky top-16 left-0 z-50 lg:z-30 w-[88vw] max-w-72 sm:w-72 h-[calc(100vh-4rem)] bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out shadow-xl lg:shadow-none",
             showSidebar ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
           )}
         >
+
           <div className="flex flex-col h-full">
             {/* Sidebar Header */}
 
@@ -2291,99 +2828,81 @@ export default function Home() {
                 </div>
               )}
             </div>
-
-
               {user && (
                 <div className="mb-4 rounded-2xl border border-slate-200 bg-white/80 px-4 py-4 shadow-sm">
+
                   <div className="flex items-start gap-3">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-400 text-white font-semibold uppercase shrink-0">
-                      {(profile?.full_name || profile?.email || user.email || "U").charAt(0)}
-                    </div>
-              
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate text-sm font-semibold text-slate-900">
-                        {profile?.full_name || profile?.email || user.email}
+                    <button
+                      type="button"
+                      onClick={() => setShowBillingActions((prev) => !prev)}
+                      className="flex w-full items-start gap-3 rounded-xl text-left transition hover:bg-slate-50 p-1"
+                    >
+                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-400 text-white font-semibold uppercase shrink-0">
+                        {(profile?.full_name || profile?.email || user.email || "U").charAt(0)}
                       </div>
-              
-                      <div className="mt-1 text-xs font-medium text-slate-600">
-                        Current plan:{" "}
-                        <span
-                          className={
-                            isProUser
-                              ? "text-violet-600"
-                              : isPremiumUser
-                              ? "text-emerald-600"
-                              : "text-slate-700"
-                          }
-                        >
-                          {isProUser ? "Pro" : isPremiumUser ? "Premium" : "Free"}
-                        </span>
-                      </div>
-              
-                      {profile?.subscription_status === "trialing" && profile?.trial_ends_at && (
-                        <div className="mt-1 text-xs text-amber-600">
-                          Trial ends on {formatPlanDate(profile.trial_ends_at)}
+
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-sm font-semibold text-slate-900">
+                          {profile?.full_name || profile?.email || user.email}
                         </div>
-                      )}
-              
-                      {hasPaidPlan &&
-                        profile?.subscription_cancel_at_period_end &&
-                        profile?.plan_ends_at && (
-                          <div className="mt-1 text-xs text-orange-600">
-                            Cancels on {formatPlanDate(profile.plan_ends_at)}
+
+                        <div className="mt-1 text-xs font-medium text-slate-600">
+                          Current plan:{" "}
+                          <span
+                            className={
+                              isProUser
+                                ? "text-violet-600"
+                                : isPremiumUser
+                                ? "text-emerald-600"
+                                : "text-slate-700"
+                            }
+                          >
+                            {currentPlanLabel}
+                          </span>
+                        </div>
+
+                        {profile?.subscription_status === "trialing" && profile?.trial_ends_at && (
+                          <div className="mt-1 text-xs text-amber-600">
+                            Trial ends on {formatPlanDate(profile.trial_ends_at)}
                           </div>
                         )}
-              
-                      {hasPaidPlan &&
-                        !profile?.subscription_cancel_at_period_end &&
-                        profile?.plan_ends_at && (
-                          <div className="mt-1 text-xs text-slate-500">
-                            Active until {formatPlanDate(profile.plan_ends_at)}
+
+                        {hasPaidPlan &&
+                          profile?.subscription_cancel_at_period_end &&
+                          profile?.plan_ends_at && (
+                            <div className="mt-1 text-xs text-orange-600">
+                              Cancels on {formatPlanDate(profile.plan_ends_at)}
+                            </div>
+                          )}
+
+                        {hasPaidPlan &&
+                          !profile?.subscription_cancel_at_period_end &&
+                          profile?.plan_ends_at && (
+                            <div className="mt-1 text-xs text-slate-500">
+                              Active until {formatPlanDate(profile.plan_ends_at)}
+                            </div>
+                          )}
+
+                        {!hasPaidPlan && canShowTrialEntry && (
+                          <div className="mt-2 text-[11px] leading-4 text-blue-600">
+                            7-day Premium trial available
                           </div>
                         )}
-              
-                      <div className="mt-3 flex flex-col gap-2">
-                        {!hasPaidPlan && (
-                          <>
-                            <button
-                              onClick={handleStartTrial}
-                              disabled={isBillingLoading}
-                              className="w-full rounded-xl bg-gradient-to-r from-blue-600 to-teal-500 px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-70"
-                            >
-                              {isBillingLoading ? "Please wait..." : "Start 7-Day Free Trial"}
-                            </button>
-              
-                            <button
-                              onClick={handleUpgradeToPro}
-                              disabled={isBillingLoading}
-                              className="w-full rounded-xl border border-violet-300 bg-violet-50 px-3 py-2 text-sm font-semibold text-violet-700 transition hover:bg-violet-100 disabled:cursor-not-allowed disabled:opacity-70"
-                            >
-                              {isBillingLoading ? "Please wait..." : "Upgrade to Pro"}
-                            </button>
-                          </>
-                        )}
-              
-                        {isPremiumUser && (
-                          <>
-                            <button
-                              onClick={handleUpgradeToPro}
-                              disabled={isBillingLoading}
-                              className="w-full rounded-xl border border-violet-300 bg-violet-50 px-3 py-2 text-sm font-semibold text-violet-700 transition hover:bg-violet-100 disabled:cursor-not-allowed disabled:opacity-70"
-                            >
-                              {isBillingLoading ? "Please wait..." : "Upgrade to Pro"}
-                            </button>
-              
-                            <button
-                              onClick={handleManageSubscription}
-                              disabled={isBillingLoading}
-                              className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-70"
-                            >
-                              {isBillingLoading ? "Please wait..." : "Manage Subscription"}
-                            </button>
-                          </>
-                        )}
-              
-                        {isProUser && (
+                      </div>
+                    </button>
+                  </div>
+
+                  {showBillingActions && (
+                    <div className="mt-3 flex flex-col gap-2">
+                      <button
+                        onClick={() => setShowPlansModal(true)}
+                        className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800 transition hover:bg-slate-50"
+                      >
+                        See Plans
+                      </button>
+
+                      {hasPaidPlan && (
+                        <>
                           <button
                             onClick={handleManageSubscription}
                             disabled={isBillingLoading}
@@ -2391,14 +2910,23 @@ export default function Home() {
                           >
                             {isBillingLoading ? "Please wait..." : "Manage Subscription"}
                           </button>
-                        )}
-                      </div>
-              
-                      <div className="mt-2 text-[11px] leading-4 text-slate-500">
-                        Cancel anytime. Paid plans stay active until the current trial or billing period ends.
-                      </div>
+
+                          <button
+                            onClick={handleCancelSubscription}
+                            disabled={isBillingLoading}
+                            className="w-full rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-70"
+                          >
+                            {isBillingLoading ? "Please wait..." : "Cancel Subscription"}
+                          </button>
+                        </>
+                      )}
                     </div>
+                  )}
+
+                  <div className="mt-2 text-[11px] leading-4 text-slate-500">
+                    Free includes Mock Test. Upgrade only when you need higher limits.
                   </div>
+
                 </div>
               )}
 
@@ -2407,13 +2935,13 @@ export default function Home() {
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 h-[calc(100vh-4rem)] overflow-hidden">
+        <main className="min-w-0 flex-1 h-[calc(100vh-4rem)] overflow-hidden">
           {!activeId ? (
             /* Empty State / Welcome Screen - Single View Layout */
             <div className="h-full flex flex-col justify-center p-4 md:p-6 lg:p-8 overflow-y-auto">
               <div className="max-w-6xl w-full mx-auto">
                 {/* Two Column Layout for Desktop, Stack for Mobile */}
-                <div className="flex flex-col lg:flex-row gap-6 lg:gap-10 items-center">
+                <div className="flex flex-col xl:flex-row gap-5 xl:gap-8 items-center">
                   
                   {/* Left Side - Hero & Upload */}
                   <div className="flex-1 text-center lg:text-left w-full">
@@ -2564,18 +3092,19 @@ export default function Home() {
                 </div>
               </div>
             </div>
+
           ) : (
             /* Document Loaded - Show Tabs and Content */
-            <div className="max-w-5xl mx-auto p-4 sm:p-6 lg:p-8">
+            <div className="h-full flex flex-col p-2 sm:p-3 lg:p-4">
               {/* Tabs */}
-              <div className="mb-6">
-                <div className="flex overflow-x-auto gap-2 p-1.5 bg-white rounded-2xl shadow-sm border border-gray-100">
+              <div className="mb-4">
+                <div className="flex w-full overflow-x-auto gap-2 p-1.5 bg-white rounded-2xl border border-slate-200 shadow-sm scrollbar-thin">
                   {tabs.map((tab) => (
                     <button
                       key={tab.id}
                       onClick={() => handleTabClick(tab.id)}
                       className={cn(
-                        "flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm whitespace-nowrap transition-all duration-200",
+                        "flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-xl font-medium text-sm whitespace-nowrap transition-all duration-200 shrink-0",
                         activeTab === tab.id
                           ? "bg-gradient-to-r from-blue-600 to-teal-600 text-white shadow-lg shadow-blue-500/25"
                           : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
@@ -2589,12 +3118,12 @@ export default function Home() {
               </div>
 
               {/* Tab Content */}
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+              <div className="flex-1 min-h-0 bg-white rounded-[28px] border border-slate-200 shadow-sm overflow-hidden">
                 {/* Chat Tab */}
                 {activeTab === "chat" && (
-                  <div className="flex flex-col h-[calc(100vh-16rem)]">
+                  <div className="flex h-full min-h-0 flex-col bg-white">
 
-                    <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center justify-between gap-3 border-b border-slate-100 bg-white px-4 py-3 sm:px-5">
                       <div className="flex items-center gap-2">
                         <select
                           value={chatLanguage}
@@ -2621,7 +3150,7 @@ export default function Home() {
                     </div>
 
                     {/* Chat Messages */}
-                    <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+                    <div className="flex-1 min-h-0 overflow-y-auto bg-white px-4 py-3 sm:px-5 sm:py-4 space-y-4">
                       {chatHistory.length === 0 && (
                         <div className="flex flex-col items-center justify-center h-full text-center py-12">
                           <div className="p-4 bg-gradient-to-br from-blue-100 to-teal-100 rounded-2xl mb-4">
@@ -2644,19 +3173,22 @@ export default function Home() {
                             message.role === "user" ? "justify-end" : "justify-start"
                           )}
                         >
+
                           <div
                             className={cn(
-                              "max-w-[85%] sm:max-w-[75%] px-4 py-3 rounded-2xl",
+                              "max-w-[96%] sm:max-w-[88%] lg:max-w-[78%] px-4 py-3 rounded-2xl",
                               message.role === "user"
-                                ? "bg-gradient-to-r from-blue-600 to-teal-600 text-white rounded-br-md"
-                                : "bg-gray-100 text-gray-900 rounded-bl-md"
+                                ? "bg-gradient-to-r from-blue-600 to-teal-600 text-white rounded-br-md shadow-sm"
+                                : "bg-transparent text-slate-900"
                             )}
                           >
+
                             {message.role === "assistant" ? (
-                              <div className="prose prose-sm max-w-none prose-p:my-2 prose-headings:my-2">
+                              <div className="prose prose-sm max-w-none prose-p:my-2 prose-headings:my-2 prose-headings:text-slate-900 prose-p:text-slate-700 prose-strong:text-slate-900 prose-li:text-slate-700">
                                 <ReactMarkdown>{message.content}</ReactMarkdown>
                               </div>
                             ) : (
+
                               <p className="whitespace-pre-wrap">{message.content}</p>
                             )}
 
@@ -2682,26 +3214,34 @@ export default function Home() {
 
                       {/* Loading Indicator */}
                       {isAsking && (
+
                         <div className="flex justify-start">
-                          <div className="px-4 py-3 bg-gray-100 rounded-2xl rounded-bl-md">
+                          <div className="px-4 py-3 text-slate-700">
                             <div className="flex items-center gap-2">
                               <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
-                              <span className="text-gray-600 text-sm">Thinking...</span>
+                              <span className="text-slate-600 text-sm">Thinking...</span>
                             </div>
                           </div>
                         </div>
+
                       )}
 
                       <div ref={chatEndRef} />
                     </div>
 
                     {/* Chat Input */}
-                    <div className="border-t border-gray-100 p-4">
+                    <div className="border-t border-slate-200 bg-white px-4 py-3 sm:px-5">
                       <div className="flex items-end gap-2">
                         <div className="flex-1 relative">
+
                           <textarea
                             value={question}
                             onChange={(e) => setQuestion(e.target.value)}
+                            onInput={(e) => {
+                              const el = e.currentTarget;
+                              el.style.height = "auto";
+                              el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
+                            }}
                             onKeyDown={(e) => {
                               if (e.key === "Enter" && !e.shiftKey) {
                                 e.preventDefault();
@@ -2709,9 +3249,10 @@ export default function Home() {
                               }
                             }}
                             placeholder="Ask anything about your document..."
-                            className="w-full px-4 py-3 pr-12 border-2 border-gray-200 rounded-xl resize-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all min-h-[52px] max-h-32"
+                            className="w-full px-4 py-3 pr-12 border-2 border-gray-200 rounded-xl resize-none overflow-y-auto focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all min-h-[52px] max-h-40"
                             rows={1}
                           />
+
                           <button
                             onClick={handleVoiceInput}
                             className={cn(
@@ -2747,15 +3288,15 @@ export default function Home() {
 
                 {/* Summary Tab */}
                 {activeTab === "summary" && (
-                  <div className="max-h-[calc(100vh-16rem)] overflow-y-auto p-6">
+                  <div className="flex h-full min-h-0 flex-col bg-white">
                     {isTabLoading ? (
-                      <div className="flex flex-col items-center justify-center py-12">
+                      <div className="flex items-center justify-between gap-3 border-b border-slate-100 bg-white px-4 py-3 sm:px-5">
                         <Loader2 className="w-8 h-8 animate-spin text-blue-600 mb-4" />
                         <p className="text-gray-600">Generating summary...</p>
                       </div>
                     ) : (
                       <>
-                        <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center justify-between gap-3 border-b border-slate-100 bg-white px-4 py-3 sm:px-5">
                           <div className="flex items-center gap-2">
                             <select
                               value={tabLanguage}
@@ -2780,146 +3321,9 @@ export default function Home() {
                             </button>
                           </div>
 
-                          <button
-                            onClick={handleSpeakTab}
-                            disabled={isAudioLoading}
-                            className={cn(
-                              "p-2 rounded-xl transition-colors flex items-center gap-2",
-                              isAudioLoading
-                                ? "bg-gray-100 text-gray-500 cursor-not-allowed"
-                                : isTabSpeaking
-                                  ? "bg-blue-100 text-blue-600"
-                                  : "text-gray-400 hover:text-gray-600 hover:bg-gray-100"
-                            )}
-                          >
-                            {isAudioLoading ? (
-                              <>
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                                <span className="text-sm">Processing...</span>
-                              </>
-                            ) : isTabSpeaking ? (
-                              <VolumeX className="w-5 h-5" />
-                            ) : (
-                              <Volume2 className="w-5 h-5" />
-                            )}
-                          </button>
-                        
-                        </div>
-
-                        <div className="prose prose-sm sm:prose max-w-none leading-7 prose-headings:mb-3 prose-headings:text-gray-900 prose-p:my-3 prose-p:text-gray-700 prose-strong:text-gray-900 prose-strong:font-semibold prose-li:my-1 prose-li:text-gray-700">
-                          <ReactMarkdown>{cleanContent}</ReactMarkdown>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                )}
-
-                {/* Concepts Tab */}
-                {activeTab === "concepts" && (
-                  <div className="max-h-[calc(100vh-16rem)] overflow-y-auto p-6">
-                    {isTabLoading ? (
-                      <div className="flex flex-col items-center justify-center py-12">
-                        <Loader2 className="w-8 h-8 animate-spin text-blue-600 mb-4" />
-                        <p className="text-gray-600">Extracting key concepts...</p>
-                      </div>
-                    ) : (
-                      <>
-
-                        <div className="flex items-center justify-between mb-4">
-                          <div className="flex items-center gap-2">
-                            <select
-                              value={tabLanguage}
-                              onChange={(e) => handleLanguageChange(e.target.value)}
-                              className="px-3 py-2 border-2 border-gray-200 rounded-xl text-sm focus:border-blue-500 outline-none"
-                            >
-                              <option value="english">English</option>
-                              <option value="hindi">Hindi</option>
-                              <option value="french">French</option>
-                              <option value="german">German</option>
-                              <option value="spanish">Spanish</option>
-                              <option value="arabic">Arabic</option>
-                              <option value="japanese">Japanese</option>
-                              <option value="chinese">chinese</option>
-                            </select>
-                        
-                            <button
-                              onClick={handleTranslate}
-                              className="px-3 py-2 border-2 border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all"
-                            >
-                              Translate
-                            </button>
-                          </div>
-
-                          <button
-                            onClick={handleSpeakTab}
-                            disabled={isAudioLoading}
-                            className={cn(
-                              "p-2 rounded-xl transition-colors flex items-center gap-2",
-                              isAudioLoading
-                                ? "bg-gray-100 text-gray-500 cursor-not-allowed"
-                                : isTabSpeaking
-                                  ? "bg-blue-100 text-blue-600"
-                                  : "text-gray-400 hover:text-gray-600 hover:bg-gray-100"
-                            )}
-                          >
-                            {isAudioLoading ? (
-                              <>
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                                <span className="text-sm">Processing...</span>
-                              </>
-                            ) : isTabSpeaking ? (
-                              <VolumeX className="w-5 h-5" />
-                            ) : (
-                              <Volume2 className="w-5 h-5" />
-                            )}
-                          </button>
-
-                        </div>
-                        <div className="prose prose-sm sm:prose max-w-none leading-7 prose-headings:mb-3 prose-headings:text-gray-900 prose-p:my-3 prose-p:text-gray-700 prose-strong:text-gray-900 prose-strong:font-semibold prose-li:my-1 prose-li:text-gray-700">
-                          <ReactMarkdown>{translatedTabContent || tabContent}</ReactMarkdown>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                )}
 
 
-                {/* Practice Tab */}
-                {activeTab === "practice" && (
-                  <div className="flex flex-col h-[calc(100vh-16rem)]">
-                    <div className="flex-1 overflow-y-auto p-6">
-                      {isTabLoading ? (
-                        <div className="flex flex-col items-center justify-center py-12">
-                          <Loader2 className="w-8 h-8 animate-spin text-blue-600 mb-4" />
-                          <p className="text-gray-600">Creating practice questions...</p>
-                        </div>
-                      ) : (
-                        <>
-                          <div className="flex items-center justify-between mb-4">
-                            <div className="flex items-center gap-2">
-                              <select
-                                value={tabLanguage}
-                                onChange={(e) => handleLanguageChange(e.target.value)}
-                                className="px-3 py-2 border-2 border-gray-200 rounded-xl text-sm focus:border-blue-500 outline-none"
-                              >
-                                <option value="english">English</option>
-                                <option value="hindi">Hindi</option>
-                                <option value="french">French</option>
-                                <option value="german">German</option>
-                                <option value="spanish">Spanish</option>
-                                <option value="arabic">Arabic</option>
-                                <option value="japanese">Japanese</option>
-                                <option value="chinese">chinese</option>
-                              </select>
-                
-                              <button
-                                onClick={handleTranslate}
-                                className="px-3 py-2 border-2 border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all"
-                              >
-                                Translate
-                              </button>
-                            </div>
-                
+                          <div className="flex flex-col items-end gap-1">
                             <button
                               onClick={handleSpeakTab}
                               disabled={isAudioLoading}
@@ -2944,23 +3348,210 @@ export default function Home() {
                               )}
                             </button>
 
+                            {audioLimitMessage && (
+                              <div className="max-w-[240px] text-right text-[11px] leading-4 text-rose-600">
+                                {audioLimitMessage}
+                              </div>
+                            )}
+                          </div>
 
+                       
+                        </div>
+
+
+                        <div className="flex-1 min-h-0 overflow-y-auto bg-white px-4 py-4 sm:px-6 sm:py-5">
+                          <div className="prose prose-sm sm:prose max-w-none leading-7 prose-headings:mb-3 prose-headings:text-slate-900 prose-p:my-3 prose-p:text-slate-700 prose-strong:text-slate-900 prose-strong:font-semibold prose-li:my-1 prose-li:text-slate-700">
+                            <ReactMarkdown>{cleanContent}</ReactMarkdown>
+                          </div>
+                        </div>
+
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {/* Concepts Tab */}
+                {activeTab === "concepts" && (
+                  <div className="flex h-full min-h-0 flex-col bg-white">
+                    {isTabLoading ? (
+                      <div className="flex items-center justify-between gap-3 border-b border-slate-100 bg-white px-4 py-3 sm:px-5">
+                        <Loader2 className="w-8 h-8 animate-spin text-blue-600 mb-4" />
+                        <p className="text-gray-600">Extracting key concepts...</p>
+                      </div>
+                    ) : (
+                      <>
+
+                        <div className="flex items-center justify-between gap-3 border-b border-slate-100 bg-white px-4 py-3 sm:px-5">
+                          <div className="flex items-center gap-2">
+                            <select
+                              value={tabLanguage}
+                              onChange={(e) => handleLanguageChange(e.target.value)}
+                              className="px-3 py-2 border-2 border-gray-200 rounded-xl text-sm focus:border-blue-500 outline-none"
+                            >
+                              <option value="english">English</option>
+                              <option value="hindi">Hindi</option>
+                              <option value="french">French</option>
+                              <option value="german">German</option>
+                              <option value="spanish">Spanish</option>
+                              <option value="arabic">Arabic</option>
+                              <option value="japanese">Japanese</option>
+                              <option value="chinese">chinese</option>
+                            </select>
+                        
+                            <button
+                              onClick={handleTranslate}
+                              className="px-3 py-2 border-2 border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all"
+                            >
+                              Translate
+                            </button>
+                          </div>
+
+                          <div className="flex flex-col items-end gap-1">
+                            <button
+                              onClick={handleSpeakTab}
+                              disabled={isAudioLoading}
+                              className={cn(
+                                "p-2 rounded-xl transition-colors flex items-center gap-2",
+                                isAudioLoading
+                                  ? "bg-gray-100 text-gray-500 cursor-not-allowed"
+                                  : isTabSpeaking
+                                    ? "bg-blue-100 text-blue-600"
+                                    : "text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+                              )}
+                            >
+                              {isAudioLoading ? (
+                                <>
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                  <span className="text-sm">Processing...</span>
+                                </>
+                              ) : isTabSpeaking ? (
+                                <VolumeX className="w-5 h-5" />
+                              ) : (
+                                <Volume2 className="w-5 h-5" />
+                              )}
+                            </button>
+
+                            {audioLimitMessage && (
+                              <div className="max-w-[240px] text-right text-[11px] leading-4 text-rose-600">
+                                {audioLimitMessage}
+                              </div>
+                            )}
+                          </div>
+
+                        </div>
+
+                        <div className="flex-1 min-h-0 overflow-y-auto bg-white px-4 py-4 sm:px-6 sm:py-5">
+                          <div className="prose prose-sm sm:prose max-w-none leading-7 prose-headings:mb-3 prose-headings:text-slate-900 prose-p:my-3 prose-p:text-slate-700 prose-strong:text-slate-900 prose-strong:font-semibold prose-li:my-1 prose-li:text-slate-700">
+                            <ReactMarkdown>{translatedTabContent || tabContent}</ReactMarkdown>
+                          </div>
+                        </div>
+
+                      </>
+                    )}
+                  </div>
+                )}
+
+
+                {/* Practice Tab */}
+                {activeTab === "practice" && (
+                  <div className="flex h-full min-h-0 flex-col bg-white">
+                    <div className="flex-1 min-h-0 overflow-y-auto bg-white">
+                      {isTabLoading ? (
+                        <div className="flex items-center justify-between gap-3 border-b border-slate-100 bg-white px-4 py-3 sm:px-5">
+                          <Loader2 className="w-8 h-8 animate-spin text-blue-600 mb-4" />
+                          <p className="text-gray-600">Creating practice questions...</p>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="flex items-center justify-between gap-3 border-b border-slate-100 bg-white px-4 py-3 sm:px-5">
+                            <div className="flex items-center gap-2">
+                              <select
+                                value={tabLanguage}
+                                onChange={(e) => handleLanguageChange(e.target.value)}
+                                className="px-3 py-2 border-2 border-gray-200 rounded-xl text-sm focus:border-blue-500 outline-none"
+                              >
+                                <option value="english">English</option>
+                                <option value="hindi">Hindi</option>
+                                <option value="french">French</option>
+                                <option value="german">German</option>
+                                <option value="spanish">Spanish</option>
+                                <option value="arabic">Arabic</option>
+                                <option value="japanese">Japanese</option>
+                                <option value="chinese">chinese</option>
+                              </select>
+                
+                              <button
+                                onClick={handleTranslate}
+                                className="px-3 py-2 border-2 border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all"
+                              >
+                                Translate
+                              </button>
+                            </div>
+                
+                            <div className="flex flex-col items-end gap-1">
+                              <button
+                                onClick={handleSpeakTab}
+                                disabled={isAudioLoading}
+                                className={cn(
+                                  "p-2 rounded-xl transition-colors flex items-center gap-2",
+                                  isAudioLoading
+                                    ? "bg-gray-100 text-gray-500 cursor-not-allowed"
+                                    : isTabSpeaking
+                                      ? "bg-blue-100 text-blue-600"
+                                      : "text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+                                )}
+                              >
+                                {isAudioLoading ? (
+                                  <>
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                    <span className="text-sm">Processing...</span>
+                                  </>
+                                ) : isTabSpeaking ? (
+                                  <VolumeX className="w-5 h-5" />
+                                ) : (
+                                  <Volume2 className="w-5 h-5" />
+                                )}
+                              </button>
+  
+                              {audioLimitMessage && (
+                                <div className="max-w-[240px] text-right text-[11px] leading-4 text-rose-600">
+                                  {audioLimitMessage}
+                                </div>
+                              )}
+                            </div>
+
+                          </div>
+
+                          <div className="flex-1 min-h-0 overflow-y-auto bg-white px-4 py-4 sm:px-6 sm:py-5">
+
+                          <div className="px-4 py-4 sm:px-6 sm:py-5">
+
+
+                            <div className="prose prose-sm sm:prose max-w-none leading-8 prose-headings:mb-4 prose-headings:text-slate-900 prose-p:my-4 prose-p:text-slate-700 prose-strong:text-slate-900 prose-strong:font-semibold prose-li:my-3 prose-li:text-slate-700">
+                              <ReactMarkdown>{cleanContent}</ReactMarkdown>
+                            </div>
+
+
+                          </div>
 
                           </div>
                 
-                          <div className="prose prose-sm sm:prose max-w-none leading-7 prose-headings:mb-3 prose-headings:text-gray-900 prose-p:my-3 prose-p:text-gray-700 prose-strong:text-gray-900 prose-strong:font-semibold prose-li:my-1 prose-li:text-gray-700">
-                            <ReactMarkdown>{cleanContent}</ReactMarkdown>
-                          </div>
                         </>
                       )}
                     </div>
                 
-                    <div className="border-t border-gray-100 p-4">
+                    <div className="border-t border-slate-200 bg-white px-4 py-4 sm:px-5">
                       <div className="flex items-end gap-2">
                         <div className="flex-1 relative">
+
                           <textarea
                             value={question}
                             onChange={(e) => setQuestion(e.target.value)}
+                            onInput={(e) => {
+                              const el = e.currentTarget;
+                              el.style.height = "auto";
+                              el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
+                            }}
                             onKeyDown={(e) => {
                               if (e.key === "Enter" && !e.shiftKey) {
                                 e.preventDefault();
@@ -2968,9 +3559,11 @@ export default function Home() {
                               }
                             }}
                             placeholder="Ask about these practice questions..."
-                            className="w-full px-4 py-3 pr-12 border-2 border-gray-200 rounded-xl resize-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all min-h-[52px] max-h-32"
+                            className="w-full px-4 py-3 pr-12 border-2 border-gray-200 rounded-xl resize-none overflow-y-auto focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all min-h-[52px] max-h-40"
                             rows={1}
                           />
+
+
                           <button
                             onClick={handleVoiceInput}
                             className={cn(
@@ -3008,26 +3601,32 @@ export default function Home() {
 
                 {/* Mock Test Tab */}
                 {activeTab === "mock" && (
-                  <div className="max-h-[calc(100vh-16rem)] overflow-y-auto ...">
+                  <div className="h-full min-h-0 overflow-y-auto bg-white px-4 py-3 sm:px-5 sm:py-4">
 
-                    <div className="flex items-center justify-center gap-2 p-4">
+                    <div className="flex items-center justify-center gap-2 pb-3 pt-1">
+
                       {[
                         { value: "easy", label: "Easy" },
                         { value: "medium", label: "Medium" },
                         { value: "hard", label: "Hard" },
-                      ].map((level) => (
+                      ]
+                        .filter((level) => allowedMockDifficulties.includes(level.value))
+                        .map((level) => (
+
+
                         <button
                           key={level.value}
+
                           onClick={() => {
                             const nextDifficulty = level.value as "easy" | "medium" | "hard";
                             setMockDifficulty(nextDifficulty);
-                            setQuizData([]);
                             setQuizAnswers({});
                             setQuizScore(null);
                             setCurrentQ(0);
                             setTranslatedTabContent("");
                             handleTabClick("mock", nextDifficulty);
                           }}
+
                           className={cn(
                             "px-4 py-2 rounded-xl text-sm font-medium border-2 transition-all",
                             mockDifficulty === level.value
@@ -3057,8 +3656,8 @@ export default function Home() {
                       </div>
                     ) : quizScore !== null ? (
                       /* Results View */
-                      <div className="max-w-2xl mx-auto">
-                        <div className="text-center mb-8">
+                      <div className="max-w-3xl mx-auto">
+                        <div className="text-center mb-6">
                           <div
                             className={cn(
                               "inline-flex p-4 rounded-2xl mb-4",
@@ -3090,7 +3689,7 @@ export default function Home() {
                         </div>
 
                         {/* Progress Bar */}
-                        <div className="h-3 bg-gray-100 rounded-full mb-8 overflow-hidden">
+                        <div className="h-3 bg-gray-100 rounded-full mb-6 overflow-hidden">
                           <div
                             className={cn(
                               "h-full rounded-full transition-all duration-500",
@@ -3105,7 +3704,7 @@ export default function Home() {
                         </div>
 
                         {/* Question Review */}
-                        <div className="space-y-4 mb-8">
+                        <div className="space-y-3 mb-6">
                           {quizData.map((q, idx) => {
                             const selectedIdx = parseInt(quizAnswers[idx] || "-1", 10);
                             const isCorrect = selectedIdx === q.correctAnswer;
@@ -3164,14 +3763,14 @@ export default function Home() {
                       /* Question View */
                       <div className="max-w-2xl mx-auto">
                         {/* Progress */}
-                        <div className="flex items-center justify-between mb-6">
+                        <div className="flex items-center justify-between mb-4">
                           <span className="text-sm text-gray-500">
                             Question {currentQ + 1} of {quizData.length}
                           </span>
                         </div>
 
                         {/* Progress Bar */}
-                        <div className="h-2 bg-gray-100 rounded-full mb-8 overflow-hidden">
+                        <div className="h-2 bg-gray-100 rounded-full mb-5 overflow-hidden">
                           <div
                             className="h-full bg-gradient-to-r from-blue-600 to-teal-600 rounded-full transition-all duration-300"
                             style={{ width: `${((currentQ + 1) / quizData.length) * 100}%` }}
@@ -3180,17 +3779,17 @@ export default function Home() {
 
                         {/* Question */}
                         <div className="mb-8">
-                          <h3 className="text-lg font-semibold text-gray-900 mb-6">
+                          <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">
                             {quizData[currentQ]?.question}
                           </h3>
 
-                          <div className="space-y-3">
+                          <div className="space-y-2.5">
                             {quizData[currentQ]?.options.map((option: string, idx: number) => (
                               <button
                                 key={idx}
                                 onClick={() => setQuizAnswers({ ...quizAnswers, [currentQ]: String(idx) })}
                                 className={cn(
-                                  "w-full text-left p-4 rounded-xl border-2 transition-all duration-200",
+                                  "w-full text-left p-3.5 rounded-xl border-2 transition-all duration-200",
                                   quizAnswers[currentQ] === String(idx)
                                     ? "border-blue-500 bg-blue-50"
                                     : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
@@ -3217,7 +3816,7 @@ export default function Home() {
                         </div>
 
                         {/* Navigation */}
-                        <div className="flex items-center justify-between">
+                        <div className="sticky bottom-0 flex items-center justify-between gap-3 bg-white pt-4">
                           <button
                             onClick={() => setCurrentQ(Math.max(0, currentQ - 1))}
                             disabled={currentQ === 0}
