@@ -234,7 +234,7 @@ export default function Home() {
 
 
   const fetchProfile = async (userId: string) => {
-    const { data: profileData } = await supabase
+    const { data: profileData, error } = await supabase
       .from("profiles")
       .select(
         "email, tier, full_name, subscription_status, trial_ends_at, plan_ends_at, stripe_customer_id, stripe_subscription_id, subscription_cancel_at_period_end"
@@ -242,8 +242,15 @@ export default function Home() {
       .eq("id", userId)
       .single();
   
+    if (error) {
+      console.error("fetchProfile failed:", error);
+      return null;
+    }
+  
     setProfile(profileData || null);
+    return profileData || null;
   };
+
 
   const syncAuthState = async (session: any) => {
     const nextUser = session?.user ?? null;
@@ -485,6 +492,9 @@ export default function Home() {
   }, []);
 
 
+
+
+
   useEffect(() => {
     const savedTheme = localStorage.getItem("grindx_theme");
     if (savedTheme === "dark" || savedTheme === "light") {
@@ -497,30 +507,65 @@ export default function Home() {
   }, [theme]);
 
 
+
+
   useEffect(() => {
     if (!user?.id) return;
+  
+    let cancelled = false;
   
     const refreshProfileFromBillingReturn = async () => {
       const params = new URLSearchParams(window.location.search);
       const billing = params.get("billing");
   
-      if (billing) {
+      if (!billing) return;
+  
+      if (billing === "cancel") {
         await fetchProfile(user.id);
         window.history.replaceState({}, "", window.location.pathname);
+        return;
+      }
+  
+      if (billing === "success") {
+        let attempts = 0;
+        const maxAttempts = 8;
+  
+        while (!cancelled && attempts < maxAttempts) {
+          const latestProfile = await fetchProfile(user.id);
+          const latestTier = (latestProfile?.tier || "free").toLowerCase();
+  
+          if (latestTier === "premium" || latestTier === "pro") {
+            break;
+          }
+  
+          attempts += 1;
+          await new Promise((resolve) => setTimeout(resolve, 1500));
+        }
+  
+        if (!cancelled) {
+          window.history.replaceState({}, "", window.location.pathname);
+        }
       }
     };
   
     const onFocus = async () => {
-      await fetchProfile(user.id);
+      if (!cancelled) {
+        await fetchProfile(user.id);
+      }
     };
   
     refreshProfileFromBillingReturn();
     window.addEventListener("focus", onFocus);
   
     return () => {
+      cancelled = true;
       window.removeEventListener("focus", onFocus);
     };
   }, [user?.id]);
+
+
+
+
 
 
   // SAVE LIBRARY WHEN UPDATED
