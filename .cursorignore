@@ -1,16 +1,9 @@
 .env
-backend/.env
-node_modules
-__pycache__
-
-.env
 .env.*
 backend/.env
-frontend/.env.local
-
 backend/.env.*
+frontend/.env.local
 frontend/.env.*
-
 
 node_modules
 **/node_modules
@@ -18,13 +11,14 @@ node_modules
 .next
 **/.next
 
-__pycache__
-**/__pycache__
-*.pyc
-
+out
 dist
 build
 coverage
+
+__pycache__
+**/__pycache__
+*.pyc
 
 *.log
 
@@ -38,11 +32,3 @@ coverage
 *.jks
 *.keystore
 
-*secret*
-*SECRET*
-*token*
-*TOKEN*
-*credential*
-*CREDENTIAL*
-*backup*
-*BACKUP*
