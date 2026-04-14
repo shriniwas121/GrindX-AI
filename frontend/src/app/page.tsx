@@ -8,7 +8,7 @@ import {
   ChevronLeft, ChevronRight, RotateCcw, CheckCircle2, XCircle,
   Sparkles, Brain, Target, MessageSquare, GraduationCap, Zap,
   LogIn, Mail, User, Lock, Eye, EyeOff, Loader2, Lightbulb, 
-  Award, TrendingUp, Library, Clock
+  Award, TrendingUp, Library, Clock, Sun, Moon
 } from "lucide-react";
 
 // Simple cn utility - combines class names
@@ -127,9 +127,10 @@ export default function Home() {
 
   const [isBillingLoading, setIsBillingLoading] = useState(false);
   const [showPlansModal, setShowPlansModal] = useState(false);
+
   const [audioLimitMessage, setAudioLimitMessage] = useState("");
   const [showBillingActions, setShowBillingActions] = useState(false);
-
+  const [theme, setTheme] = useState<"light" | "dark">("light");
 
 
   const userLibraryKey = user?.id ? `grindx_library_${user.id}` : null;
@@ -482,6 +483,18 @@ export default function Home() {
       subscription.unsubscribe();
     };
   }, []);
+
+
+  useEffect(() => {
+    const savedTheme = localStorage.getItem("grindx_theme");
+    if (savedTheme === "dark" || savedTheme === "light") {
+      setTheme(savedTheme);
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("grindx_theme", theme);
+  }, [theme]);
 
 
   useEffect(() => {
@@ -2283,10 +2296,14 @@ export default function Home() {
     { id: "mock" as const, label: "Mock Test", icon: Award },
   ];
 
+
   return (
     <div
-      className="min-h-screen bg-slate-50 text-slate-900"
-      style={{ colorScheme: "light" }}
+      className={cn(
+        "min-h-screen transition-colors duration-300",
+        theme === "dark" ? "bg-slate-950 text-slate-100" : "bg-slate-50 text-slate-900"
+      )}
+      style={{ colorScheme: theme }}
     >
 
 
@@ -2497,9 +2514,6 @@ export default function Home() {
       )}
 
 
-
-
-
       {/* Auth Modal */}
       {showAuthModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
@@ -2662,7 +2676,14 @@ export default function Home() {
       )}
 
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-gray-200/50 shadow-sm">
+      <header
+        className={cn(
+          "sticky top-0 z-40 backdrop-blur-xl border-b shadow-sm transition-colors duration-300",
+          theme === "dark"
+            ? "bg-slate-950/85 border-slate-800"
+            : "bg-white/80 border-gray-200/50"
+        )}
+      >
         <div className="max-w-7xl mx-auto px-3 sm:px-5 lg:px-8">
           <div className="flex items-center justify-between h-16 gap-3">
             {/* Left: Menu + Logo */}
@@ -2699,27 +2720,54 @@ export default function Home() {
 
             {/* Right: Sign In */}
 
-            {user ? (
+            {/*Dark OR Light Toggle */}
+            <div className="flex items-center gap-2">
               <button
-                onClick={handleSignOut}
-                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-teal-600 text-white font-medium rounded-xl hover:from-blue-700 hover:to-teal-700 shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 transition-all duration-200"
+                onClick={() => setTheme((prev) => (prev === "dark" ? "light" : "dark"))}
+                className={cn(
+                  "flex items-center gap-2 px-3 py-2 rounded-xl border transition-all duration-200",
+                  theme === "dark"
+                    ? "bg-slate-900 border-slate-700 text-slate-100 hover:bg-slate-800"
+                    : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+                )}
+                aria-label="Toggle theme"
               >
-                <LogIn className="w-4 h-4" />
-                <span className="hidden sm:inline">Sign Out</span>
+                {theme === "dark" ? (
+                  <>
+                    <Sun className="w-4 h-4" />
+                    <span className="hidden sm:inline text-sm font-medium">Light</span>
+                  </>
+                ) : (
+                  <>
+                    <Moon className="w-4 h-4" />
+                    <span className="hidden sm:inline text-sm font-medium">Dark</span>
+                  </>
+                )}
               </button>
-            ) : (
-              <button
-                onClick={() => {
-                  setAuthMessage("");
-                  setAuthMode("signin");
-                  setShowAuthModal(true);
-                }}
-                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-teal-600 text-white font-medium rounded-xl hover:from-blue-700 hover:to-teal-700 shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 transition-all duration-200"
-              >
-                <LogIn className="w-4 h-4" />
-                <span className="hidden sm:inline">Sign In</span>
-              </button>
-            )}
+
+              {user ? (
+                <button
+                  onClick={handleSignOut}
+                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-teal-600 text-white font-medium rounded-xl hover:from-blue-700 hover:to-teal-700 shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 transition-all duration-200"
+                >
+                  <LogIn className="w-4 h-4" />
+                  <span className="hidden sm:inline">Sign Out</span>
+                </button>
+              ) : (
+                <button
+                  onClick={() => {
+                    setAuthMessage("");
+                    setAuthMode("signin");
+                    setShowAuthModal(true);
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-teal-600 text-white font-medium rounded-xl hover:from-blue-700 hover:to-teal-700 shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 transition-all duration-200"
+                >
+                  <LogIn className="w-4 h-4" />
+                  <span className="hidden sm:inline">Sign In</span>
+                </button>
+              )}
+            </div>
+
 
           </div>
         </div>
@@ -2735,9 +2783,13 @@ export default function Home() {
         )}
 
         {/* Sidebar */}
+
         <aside
           className={cn(
-            "fixed lg:sticky top-16 left-0 z-50 lg:z-30 w-[88vw] max-w-72 sm:w-72 h-[calc(100vh-4rem)] bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out shadow-xl lg:shadow-none",
+            "fixed lg:sticky top-16 left-0 z-50 lg:z-30 w-[88vw] max-w-72 sm:w-72 h-[calc(100vh-4rem)] border-r transform transition-all duration-300 ease-in-out shadow-xl lg:shadow-none",
+            theme === "dark"
+              ? "bg-slate-950 border-slate-800"
+              : "bg-white border-gray-200",
             showSidebar ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
           )}
         >
@@ -2753,19 +2805,34 @@ export default function Home() {
                 className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-teal-600 text-white font-medium rounded-xl hover:from-blue-700 hover:to-teal-700 shadow-md hover:shadow-lg transition-all duration-200"
               >
                 <Plus className="w-4 h-4" />
-                New Chat
+                New Document
               </button>
             </div>
 
 
-            <div className="flex items-center justify-between px-4 py-4 border-b border-gray-100">
+            <div
+              className={cn(
+                "flex items-center justify-between px-4 py-4 border-b transition-colors duration-300",
+                theme === "dark" ? "border-slate-800" : "border-gray-100"
+              )}
+            >
+
               <div className="flex items-center gap-2">
                 <Library className="w-5 h-5 text-blue-600" />
-                <h2 className="font-semibold text-gray-900">My Library</h2>
+                <h2 className={cn("font-semibold", theme === "dark" ? "text-slate-100" : "text-gray-900")}>
+                  My Library
+                </h2>
               </div>
+
               <button
                 onClick={() => setShowSidebar(false)}
-                className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg lg:hidden"
+
+                className={cn(
+                  "p-1.5 rounded-lg lg:hidden transition-colors",
+                  theme === "dark"
+                    ? "text-slate-400 hover:text-slate-200 hover:bg-slate-800"
+                    : "text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+                )}
               >
                 <X className="w-5 h-5" />
               </button>
@@ -2777,31 +2844,59 @@ export default function Home() {
             <div className="flex-1 overflow-y-auto px-4 pb-4">
               {library.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
-                  <div className="p-4 bg-gray-100 rounded-2xl mb-4">
+
+                  <div
+                    className={cn(
+                      "p-4 rounded-2xl mb-4 transition-colors",
+                      theme === "dark" ? "bg-slate-800" : "bg-gray-100"
+                    )}
+                  >
+
                     <BookOpen className="w-8 h-8 text-gray-400" />
                   </div>
-                  <p className="text-gray-500 text-sm">No documents yet</p>
-                  <p className="text-gray-400 text-xs mt-1">Upload your first study material</p>
+
+                  <p className={cn("text-sm", theme === "dark" ? "text-slate-300" : "text-gray-500")}>
+                    No documents yet
+                  </p>
+                  <p className={cn("text-xs mt-1", theme === "dark" ? "text-slate-500" : "text-gray-400")}>
+                    Upload your first study material
+                  </p>
+
                 </div>
               ) : (
                 <div className="space-y-2">
                   {library.map((item) => (
                     <div
                       key={item.id}
+
+
                       className={cn(
                         "group relative p-3 rounded-xl cursor-pointer transition-all duration-200",
                         activeId === item.id
-                          ? "bg-gradient-to-r from-blue-50 to-teal-50 border-2 border-blue-200 shadow-sm"
-                          : "bg-gray-50 border-2 border-transparent hover:bg-gray-100 hover:border-gray-200"
+                          ? theme === "dark"
+                            ? "bg-slate-800 border-2 border-blue-500/50 shadow-sm"
+                            : "bg-gradient-to-r from-blue-50 to-teal-50 border-2 border-blue-200 shadow-sm"
+                          : theme === "dark"
+                            ? "bg-slate-900 border-2 border-transparent hover:bg-slate-800 hover:border-slate-700"
+                            : "bg-gray-50 border-2 border-transparent hover:bg-gray-100 hover:border-gray-200"
                       )}
+
                       onClick={() => handleSelectItem(item)}
                     >
                       <div className="flex items-start gap-3">
                         <div
+
                           className={cn(
-                            "p-2 rounded-lg",
-                            activeId === item.id ? "bg-blue-100" : "bg-white"
+                            "p-2 rounded-lg transition-colors",
+                            activeId === item.id
+                              ? theme === "dark"
+                                ? "bg-blue-500/15"
+                                : "bg-blue-100"
+                              : theme === "dark"
+                                ? "bg-slate-800"
+                                : "bg-white"
                           )}
+
                         >
                           {item.type === "VIDEO" && <Video className="w-4 h-4 text-red-600" />}
                           {item.type === "WEB" && <Globe className="w-4 h-4 text-teal-600" />}
@@ -2810,8 +2905,15 @@ export default function Home() {
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium text-gray-900 text-sm truncate">{item.name}</p>
-                          <p className="text-xs text-gray-500 mt-0.5">{item.status}</p>
+
+
+                          <p className={cn("font-medium text-sm truncate", theme === "dark" ? "text-slate-100" : "text-gray-900")}>
+                            {item.name}
+                          </p>
+                          <p className={cn("text-xs mt-0.5", theme === "dark" ? "text-slate-400" : "text-gray-500")}>
+                            {item.status}
+                          </p>
+
                         </div>
                         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button
@@ -2820,7 +2922,14 @@ export default function Home() {
 
                               handleRename(item.id);
                             }}
-                            className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+
+                            className={cn(
+                              "p-1.5 rounded-lg transition-all",
+                              theme === "dark"
+                                ? "text-slate-400 hover:text-blue-300 hover:bg-slate-800"
+                                : "text-gray-400 hover:text-blue-600 hover:bg-blue-50"
+                            )}
+
                           >
                             <Pencil className="w-3.5 h-3.5" />
                           </button>
@@ -2829,7 +2938,14 @@ export default function Home() {
                               e.stopPropagation();
                               handleDeleteItem(item.id);
                             }}
-                            className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+
+                            className={cn(
+                              "p-1.5 rounded-lg transition-all",
+                              theme === "dark"
+                                ? "text-slate-400 hover:text-red-300 hover:bg-slate-800"
+                                : "text-gray-400 hover:text-red-500 hover:bg-red-50"
+                            )}
+
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -2840,25 +2956,51 @@ export default function Home() {
                 </div>
               )}
             </div>
-              {user && (
-                <div className="mb-4 rounded-2xl border border-slate-200 bg-white/80 px-4 py-4 shadow-sm">
 
+
+              {user && (
+                <div
+                  className={cn(
+                    "mb-4 rounded-2xl border px-4 py-4 shadow-sm transition-colors duration-300",
+                    theme === "dark"
+                      ? "border-slate-700 bg-slate-900"
+                      : "border-slate-200 bg-white/80"
+                  )}
+                >
                   <div className="flex items-start gap-3">
                     <button
                       type="button"
                       onClick={() => setShowBillingActions((prev) => !prev)}
-                      className="flex w-full items-start gap-3 rounded-xl text-left transition hover:bg-slate-50 p-1"
+                      className={cn(
+                        "flex w-full items-start gap-3 rounded-xl text-left transition p-1",
+                        theme === "dark" ? "hover:bg-slate-800" : "hover:bg-slate-50"
+                      )}
                     >
-                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-400 text-white font-semibold uppercase shrink-0">
+                      <div
+                        className={cn(
+                          "flex h-12 w-12 items-center justify-center rounded-full text-white font-semibold uppercase shrink-0",
+                          theme === "dark" ? "bg-slate-600" : "bg-slate-400"
+                        )}
+                      >
                         {(profile?.full_name || profile?.email || user.email || "U").charAt(0)}
                       </div>
-
+              
                       <div className="min-w-0 flex-1">
-                        <div className="truncate text-sm font-semibold text-slate-900">
+                        <div
+                          className={cn(
+                            "truncate text-sm font-semibold",
+                            theme === "dark" ? "text-slate-100" : "text-slate-900"
+                          )}
+                        >
                           {profile?.full_name || profile?.email || user.email}
                         </div>
-
-                        <div className="mt-1 text-xs font-medium text-slate-600">
+              
+                        <div
+                          className={cn(
+                            "mt-1 text-xs font-medium",
+                            theme === "dark" ? "text-slate-300" : "text-slate-600"
+                          )}
+                        >
                           Current plan:{" "}
                           <span
                             className={
@@ -2866,19 +3008,21 @@ export default function Home() {
                                 ? "text-violet-600"
                                 : isPremiumUser
                                 ? "text-emerald-600"
+                                : theme === "dark"
+                                ? "text-slate-300"
                                 : "text-slate-700"
                             }
                           >
                             {currentPlanLabel}
                           </span>
                         </div>
-
+              
                         {profile?.subscription_status === "trialing" && profile?.trial_ends_at && (
                           <div className="mt-1 text-xs text-amber-600">
                             Trial ends on {formatPlanDate(profile.trial_ends_at)}
                           </div>
                         )}
-
+              
                         {hasPaidPlan &&
                           profile?.subscription_cancel_at_period_end &&
                           profile?.plan_ends_at && (
@@ -2886,15 +3030,20 @@ export default function Home() {
                               Cancels on {formatPlanDate(profile.plan_ends_at)}
                             </div>
                           )}
-
+              
                         {hasPaidPlan &&
                           !profile?.subscription_cancel_at_period_end &&
                           profile?.plan_ends_at && (
-                            <div className="mt-1 text-xs text-slate-500">
+                            <div
+                              className={cn(
+                                "mt-1 text-xs",
+                                theme === "dark" ? "text-slate-400" : "text-slate-500"
+                              )}
+                            >
                               Active until {formatPlanDate(profile.plan_ends_at)}
                             </div>
                           )}
-
+              
                         {!hasPaidPlan && canShowTrialEntry && (
                           <div className="mt-2 text-[11px] leading-4 text-blue-600">
                             7-day Premium trial available
@@ -2903,30 +3052,45 @@ export default function Home() {
                       </div>
                     </button>
                   </div>
-
+              
                   {showBillingActions && (
                     <div className="mt-3 flex flex-col gap-2">
                       <button
                         onClick={() => setShowPlansModal(true)}
-                        className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800 transition hover:bg-slate-50"
+                        className={cn(
+                          "w-full rounded-xl border px-3 py-2 text-sm font-semibold transition",
+                          theme === "dark"
+                            ? "border-slate-700 bg-slate-800 text-slate-100 hover:bg-slate-700"
+                            : "border-slate-300 bg-white text-slate-800 hover:bg-slate-50"
+                        )}
                       >
                         See Plans
                       </button>
-
+              
                       {hasPaidPlan && (
                         <>
                           <button
                             onClick={handleManageSubscription}
                             disabled={isBillingLoading}
-                            className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-70"
+                            className={cn(
+                              "w-full rounded-xl border px-3 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-70",
+                              theme === "dark"
+                                ? "border-slate-700 bg-slate-800 text-slate-100 hover:bg-slate-700"
+                                : "border-slate-300 bg-white text-slate-800 hover:bg-slate-50"
+                            )}
                           >
                             {isBillingLoading ? "Please wait..." : "Manage Subscription"}
                           </button>
-
+              
                           <button
                             onClick={handleCancelSubscription}
                             disabled={isBillingLoading}
-                            className="w-full rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-70"
+                            className={cn(
+                              "w-full rounded-xl border px-3 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-70",
+                              theme === "dark"
+                                ? "border-rose-900 bg-rose-950/40 text-rose-300 hover:bg-rose-950/60"
+                                : "border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100"
+                            )}
                           >
                             {isBillingLoading ? "Please wait..." : "Cancel Subscription"}
                           </button>
@@ -2934,23 +3098,32 @@ export default function Home() {
                       )}
                     </div>
                   )}
-
-                  <div className="mt-2 text-[11px] leading-4 text-slate-500">
+              
+                  <div
+                    className={cn(
+                      "mt-2 text-[11px] leading-4",
+                      theme === "dark" ? "text-slate-400" : "text-slate-500"
+                    )}
+                  >
                     Free includes Mock Test. Upgrade only when you need higher limits.
                   </div>
-
                 </div>
               )}
-
           </div>
-
         </aside>
+
 
         {/* Main Content */}
         <main className="min-w-0 flex-1 h-[calc(100vh-4rem)] overflow-hidden">
+          
           {!activeId ? (
             /* Empty State / Welcome Screen - Single View Layout */
-            <div className="h-full flex flex-col justify-center p-4 md:p-6 lg:p-8 overflow-y-auto">
+            <div
+              className={cn(
+                "h-full flex flex-col justify-center p-4 md:p-6 lg:p-8 overflow-y-auto transition-colors duration-300",
+                theme === "dark" ? "bg-slate-950" : "bg-transparent"
+              )}
+            >
               <div className="max-w-6xl w-full mx-auto">
                 {/* Two Column Layout for Desktop, Stack for Mobile */}
                 <div className="flex flex-col xl:flex-row gap-5 xl:gap-8 items-center">
@@ -2959,37 +3132,80 @@ export default function Home() {
                   <div className="flex-1 text-center lg:text-left w-full">
                     {/* Hero - Compact */}
                     <div className="mb-4 lg:mb-6">
-                      <div className="inline-flex p-2.5 bg-gradient-to-br from-blue-100 via-blue-50 to-teal-100 rounded-2xl shadow-md shadow-blue-500/10 mb-3 lg:mb-4">
+                      <div
+                        className={cn(
+                          "inline-flex p-2.5 rounded-2xl shadow-md mb-3 lg:mb-4",
+                          theme === "dark"
+                            ? "bg-gradient-to-br from-slate-800 via-slate-900 to-slate-800 shadow-slate-950/40"
+                            : "bg-gradient-to-br from-blue-100 via-blue-50 to-teal-100 shadow-blue-500/10"
+                        )}
+                      >
                         <div className="p-2.5 bg-gradient-to-br from-blue-600 to-teal-500 rounded-xl shadow-lg">
                           <Sparkles className="w-6 h-6 lg:w-8 lg:h-8 text-white" />
                         </div>
                       </div>
-                      <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-6 lg:mb-8">
+          
+                      <h1
+                        className={cn(
+                          "text-2xl sm:text-3xl lg:text-4xl font-bold mb-6 lg:mb-8",
+                          theme === "dark" ? "text-slate-100" : "text-gray-900"
+                        )}
+                      >
                         Welcome to{" "}
                         <span className="bg-gradient-to-r from-blue-600 to-teal-500 bg-clip-text text-transparent">
                           Grindx AI
                         </span>
                       </h1>
-                      <p className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-700">
+          
+                      <p
+                        className={cn(
+                          "text-lg sm:text-xl lg:text-2xl font-bold",
+                          theme === "dark" ? "text-slate-200" : "text-gray-700"
+                        )}
+                      >
                         Stop studying hard. Start studying smart.
                       </p>
-                      <p className="text-sm sm:text-base lg:text-lg text-gray-600 max-w-lg mx-auto lg:mx-0 leading-relaxed">
+          
+                      <p
+                        className={cn(
+                          "text-sm sm:text-base lg:text-lg max-w-lg mx-auto lg:mx-0 leading-relaxed",
+                          theme === "dark" ? "text-slate-400" : "text-gray-600"
+                        )}
+                      >
                         Upload notes, screenshots, or snap a photo — then chat with them naturally. Get summaries, practice questions, and full mock exams.
                       </p>
                     </div>
-
+          
                     {/* Upload Section - Compact */}
-                    <div className="bg-white rounded-2xl border-2 border-dashed border-gray-200 hover:border-blue-300 hover:bg-blue-50/30 transition-all duration-300 p-4 lg:p-6 mb-4 lg:mb-6">
+                    <div
+                      className={cn(
+                        "rounded-3xl border-2 border-dashed transition-all duration-300 p-4 lg:p-4 mb-2 lg:mb-6",
+                        theme === "dark"
+                          ? "bg-slate-900 border-slate-700 hover:border-blue-500/50 hover:bg-slate-800"
+                          : "bg-white border-gray-200 hover:border-blue-300 hover:bg-blue-50/30"
+                      )}
+                    >
                       <div className="flex flex-col sm:flex-row items-center gap-4">
-                        <div className="p-3 bg-gradient-to-br from-blue-100 to-teal-100 rounded-xl shrink-0">
+                        <div
+                          className={cn(
+                            "p-3 rounded-xl shrink-0",
+                            theme === "dark"
+                              ? "bg-gradient-to-br from-slate-800 to-slate-700"
+                              : "bg-gradient-to-br from-blue-100 to-teal-100"
+                          )}
+                        >
                           <Upload className="w-6 h-6 text-blue-600" />
                         </div>
+          
                         <div className="flex-1 text-center sm:text-left">
-                          <h3 className="font-semibold text-gray-900 mb-1">
+                          <h3 className={cn("font-semibold mb-1", theme === "dark" ? "text-slate-100" : "text-gray-900")}>
                             Upload your study material
                           </h3>
-                          <p className="text-gray-500 text-sm">PDF, Word, Text, Images, or URL</p>
+                          <p className={cn("text-sm", theme === "dark" ? "text-slate-400" : "text-gray-500")}>
+                            PDF, Word, Text, Images, or URL
+                          </p>
                         </div>
+          
                         <div className="flex gap-2 shrink-0">
                           <button
                             onClick={handleUploadButtonClick}
@@ -2998,7 +3214,15 @@ export default function Home() {
                             <Upload className="w-4 h-4" />
                             Upload
                           </button>
-                          <label className="flex items-center gap-2 px-4 py-2.5 bg-white border-2 border-gray-200 text-gray-700 font-medium text-sm rounded-xl hover:border-amber-300 hover:bg-amber-50 transition-all cursor-pointer">
+          
+                          <label
+                            className={cn(
+                              "flex items-center gap-2 px-4 py-2.5 border-2 font-medium text-sm rounded-xl transition-all cursor-pointer",
+                              theme === "dark"
+                                ? "bg-slate-900 border-slate-700 text-slate-200 hover:border-amber-400/60 hover:bg-slate-800"
+                                : "bg-white border-gray-200 text-gray-700 hover:border-amber-300 hover:bg-amber-50"
+                            )}
+                          >
                             <Camera className="w-4 h-4" />
                             <span className="hidden sm:inline">Camera</span>
                             <input
@@ -3012,14 +3236,12 @@ export default function Home() {
                         </div>
                       </div>
                     </div>
-
+          
                     {/* URL Input - Inline */}
-
-
                     <div className="flex items-center gap-2 mb-4 lg:mb-6">
                       <div className="flex-1 relative">
                         <Link2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    
+          
                         <input
                           ref={urlInputRef}
                           type="text"
@@ -3033,10 +3255,15 @@ export default function Home() {
                             }
                           }}
                           placeholder="Paste YouTube, website URL or Screenshot."
-                          className="w-full pl-10 pr-4 py-2.5 border-2 border-gray-200 rounded-xl text-sm focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all"
+                          className={cn(
+                            "w-full pl-10 pr-4 py-10 border-2 rounded-3xl text-sm focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all",
+                            theme === "dark"
+                              ? "bg-slate-900 border-slate-700 text-slate-100 placeholder:text-slate-500"
+                              : "bg-white border-gray-200 text-slate-900 placeholder:text-slate-400"
+                          )}
                         />
                       </div>
-                    
+          
                       <button
                         type="button"
                         onClick={() => handleUrlAnalyze(urlInput)}
@@ -3046,9 +3273,7 @@ export default function Home() {
                         Analyze
                       </button>
                     </div>
-
-
-
+          
                     {/* Trust Badges - Horizontal */}
                     <div className="flex flex-wrap justify-center lg:justify-start gap-4 lg:gap-6">
                       {[
@@ -3057,15 +3282,22 @@ export default function Home() {
                         { icon: Award, label: "Ace Exams" },
                       ].map((stat, index) => (
                         <div key={index} className="flex items-center gap-2">
-                          <div className="p-1.5 bg-gray-100 rounded-lg">
-                            <stat.icon className="w-4 h-4 text-gray-600" />
+                          <div
+                            className={cn(
+                              "p-1.5 rounded-lg",
+                              theme === "dark" ? "bg-slate-800" : "bg-gray-100"
+                            )}
+                          >
+                            <stat.icon className={cn("w-4 h-4", theme === "dark" ? "text-slate-300" : "text-gray-600")} />
                           </div>
-                          <span className="text-sm font-medium text-gray-700">{stat.label}</span>
+                          <span className={cn("text-sm font-medium", theme === "dark" ? "text-slate-300" : "text-gray-700")}>
+                            {stat.label}
+                          </span>
                         </div>
                       ))}
                     </div>
                   </div>
-
+          
                   {/* Right Side - Feature Cards Grid */}
                   <div className="flex-1 w-full">
                     <div className="grid grid-cols-2 gap-3 lg:gap-4">
@@ -3077,7 +3309,12 @@ export default function Home() {
                       ].map((feature, index) => (
                         <div
                           key={index}
-                          className="group p-4 lg:p-5 bg-white rounded-xl border-2 border-gray-100 hover:border-blue-200 hover:shadow-lg hover:shadow-blue-500/10 transition-all duration-300"
+                          className={cn(
+                            "group p-4 lg:p-5 rounded-xl border-2 transition-all duration-300",
+                            theme === "dark"
+                              ? "bg-slate-900 border-slate-800 hover:border-blue-500/40 hover:shadow-lg hover:shadow-slate-950/30"
+                              : "bg-white border-gray-100 hover:border-blue-200 hover:shadow-lg hover:shadow-blue-500/10"
+                          )}
                         >
                           <div
                             className={cn(
@@ -3090,27 +3327,40 @@ export default function Home() {
                           >
                             <feature.icon className="w-4 h-4 lg:w-5 lg:h-5" />
                           </div>
-                          <h3 className="font-semibold text-gray-900 text-sm lg:text-base mb-1">{feature.title}</h3>
-                          <p className="text-xs lg:text-sm text-gray-500">{feature.description}</p>
+          
+                          <h3 className={cn("font-semibold text-sm lg:text-base mb-1", theme === "dark" ? "text-slate-100" : "text-gray-900")}>
+                            {feature.title}
+                          </h3>
+          
+                          <p className={cn("text-xs lg:text-sm", theme === "dark" ? "text-slate-400" : "text-gray-500")}>
+                            {feature.description}
+                          </p>
                         </div>
                       ))}
                     </div>
                     
                     {/* Hint */}
-                    <p className="text-xs text-gray-400 mt-3 lg:mt-4 text-center">
+                    <p className={cn("text-xs mt-3 lg:mt-4 text-center", theme === "dark" ? "text-slate-500" : "text-gray-400")}>
                       Tip: You can also paste screenshots (Ctrl+V) or drag and drop files
                     </p>
                   </div>
                 </div>
               </div>
             </div>
-
           ) : (
+
             /* Document Loaded - Show Tabs and Content */
             <div className="h-full flex flex-col p-2 sm:p-3 lg:p-4">
               {/* Tabs */}
               <div className="mb-4">
-                <div className="flex w-full overflow-x-auto gap-2 p-1.5 bg-white rounded-2xl border border-slate-200 shadow-sm scrollbar-thin">
+                <div
+                  className={cn(
+                    "flex w-full overflow-x-auto gap-2 p-1.5 rounded-2xl border shadow-sm scrollbar-thin transition-colors duration-300",
+                    theme === "dark"
+                      ? "bg-slate-900 border-slate-800"
+                      : "bg-white border-slate-200"
+                  )}
+                >
                   {tabs.map((tab) => (
                     <button
                       key={tab.id}
@@ -3119,7 +3369,10 @@ export default function Home() {
                         "flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-xl font-medium text-sm whitespace-nowrap transition-all duration-200 shrink-0",
                         activeTab === tab.id
                           ? "bg-gradient-to-r from-blue-600 to-teal-600 text-white shadow-lg shadow-blue-500/25"
+                          : theme === "dark"
+                          ? "text-slate-300 hover:text-white hover:bg-slate-800"
                           : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+
                       )}
                     >
                       <tab.icon className="w-4 h-4" />
@@ -3129,13 +3382,31 @@ export default function Home() {
                 </div>
               </div>
 
+
+
               {/* Tab Content */}
-              <div className="flex-1 min-h-0 bg-white rounded-[28px] border border-slate-200 shadow-sm overflow-hidden">
+              <div
+                className={cn(
+                  "flex-1 min-h-0 rounded-[28px] border shadow-sm overflow-hidden transition-colors duration-300",
+                  theme === "dark"
+                    ? "bg-slate-900 border-slate-800"
+                    : "bg-white border-slate-200"
+                )}
+              >
                 {/* Chat Tab */}
                 {activeTab === "chat" && (
                   <div className="flex h-full min-h-0 flex-col bg-white">
 
-                    <div className="flex items-center justify-between gap-3 border-b border-slate-100 bg-white px-4 py-3 sm:px-5">
+                    <div
+                      className={cn(
+                        "flex items-center justify-between gap-3 border-b px-4 py-3 sm:px-5",
+                        theme === "dark"
+                          ? "border-slate-800 bg-slate-900"
+                          : "border-slate-100 bg-white"
+                      )}
+                    >
+
+
                       <div className="flex items-center gap-2">
                         <select
                           value={chatLanguage}
@@ -3162,7 +3433,13 @@ export default function Home() {
                     </div>
 
                     {/* Chat Messages */}
-                    <div className="flex-1 min-h-0 overflow-y-auto bg-white px-4 py-3 sm:px-5 sm:py-4 space-y-4">
+
+                    <div
+                      className={cn(
+                        "flex-1 min-h-0 overflow-y-auto px-4 py-3 sm:px-5 sm:py-4 space-y-4",
+                        theme === "dark" ? "bg-slate-900" : "bg-white"
+                      )}
+                    >
                       {chatHistory.length === 0 && (
                         <div className="flex flex-col items-center justify-center h-full text-center py-12">
                           <div className="p-4 bg-gradient-to-br from-blue-100 to-teal-100 rounded-2xl mb-4">
@@ -3190,18 +3467,34 @@ export default function Home() {
                             className={cn(
                               "max-w-[96%] sm:max-w-[88%] lg:max-w-[78%] px-4 py-3 rounded-2xl",
                               message.role === "user"
-                                ? "bg-gradient-to-r from-blue-600 to-teal-600 text-white rounded-br-md shadow-sm"
+                                ? "bg-gradient-to-r from-blue-600 to-teal-600 !text-white rounded-br-md shadow-sm"
+                                : theme === "dark"
+                                ? "bg-transparent text-slate-100"
                                 : "bg-transparent text-slate-900"
                             )}
                           >
 
                             {message.role === "assistant" ? (
-                              <div className="prose prose-sm max-w-none prose-p:my-2 prose-headings:my-2 prose-headings:text-slate-900 prose-p:text-slate-700 prose-strong:text-slate-900 prose-li:text-slate-700">
+
+                              <div
+                                className={cn(
+                                  "prose prose-sm max-w-none prose-p:my-2 prose-headings:my-2",
+                                  theme === "dark"
+                                    ? "prose-headings:!text-slate-100 prose-p:!text-slate-300 prose-strong:!text-slate-100 prose-li:!text-slate-300 prose-a:!text-blue-300"
+                                    : "prose-headings:text-slate-900 prose-p:text-slate-700 prose-strong:text-slate-900 prose-li:text-slate-700"
+                                )}
+                              >
+
                                 <ReactMarkdown>{message.content}</ReactMarkdown>
                               </div>
+
+
                             ) : (
 
-                              <p className="whitespace-pre-wrap">{message.content}</p>
+                              <p className={cn("whitespace-pre-wrap", message.role === "user" ? "!text-white" : theme === "dark" ? "text-slate-100" : "text-slate-900")}>
+                                {message.content}
+                              </p>
+
                             )}
 
                             {message.role === "assistant" && message.content && (
@@ -3242,9 +3535,20 @@ export default function Home() {
                     </div>
 
                     {/* Chat Input */}
-                    <div className="border-t border-slate-200 bg-white px-4 py-3 sm:px-5">
+
+                    <div
+                      className={cn(
+                        "border-t px-4 py-3 sm:px-5",
+                        theme === "dark"
+                          ? "border-slate-800 bg-slate-900"
+                          : "border-slate-200 bg-white"
+                      )}
+                    >
+
                       <div className="flex items-end gap-2">
                         <div className="flex-1 relative">
+
+
 
                           <textarea
                             value={question}
@@ -3261,9 +3565,15 @@ export default function Home() {
                               }
                             }}
                             placeholder="Ask anything about your document..."
-                            className="w-full px-4 py-3 pr-12 border-2 border-gray-200 rounded-xl resize-none overflow-y-auto focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all min-h-[52px] max-h-40"
+                            className={cn(
+                              "w-full px-4 py-3 pr-12 border-2 rounded-xl resize-none overflow-y-auto focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all min-h-[52px] max-h-40",
+                              theme === "dark"
+                                ? "bg-slate-950 border-slate-700 !text-white caret-white placeholder:!text-slate-400"
+                                : "bg-white border-gray-200 !text-slate-900 caret-slate-900 placeholder:!text-slate-400"
+                            )}
                             rows={1}
                           />
+
 
                           <button
                             onClick={handleVoiceInput}
@@ -3298,22 +3608,50 @@ export default function Home() {
                   </div>
                 )}
 
+
+
+
+
                 {/* Summary Tab */}
                 {activeTab === "summary" && (
-                  <div className="flex h-full min-h-0 flex-col bg-white">
+
+                  <div
+                    className={cn(
+                      "flex h-full min-h-0 flex-col",
+                      theme === "dark" ? "bg-slate-900" : "bg-white"
+                    )}
+                  >
+
                     {isTabLoading ? (
-                      <div className="flex items-center justify-between gap-3 border-b border-slate-100 bg-white px-4 py-3 sm:px-5">
-                        <Loader2 className="w-8 h-8 animate-spin text-blue-600 mb-4" />
-                        <p className="text-gray-600">Generating summary...</p>
+
+                      <div
+                        className={cn(
+                          "flex items-center justify-between gap-3 border-b px-4 py-3 sm:px-5",
+                          theme === "dark"
+                            ? "border-slate-800 bg-slate-900"
+                            : "border-slate-100 bg-white"
+                        )}
+                      >
                       </div>
                     ) : (
                       <>
-                        <div className="flex items-center justify-between gap-3 border-b border-slate-100 bg-white px-4 py-3 sm:px-5">
+
+                        <div
+                          className={cn(
+                            "flex items-center justify-between gap-1 border-b px-4 py-4 sm:px-5 sm:py-3",
+                            theme === "dark"
+                              ? "border-slate-800 bg-slate-900"
+                              : "border-slate-100 bg-white"
+                          )}
+                        >
+
+
                           <div className="flex items-center gap-2">
                             <select
-                              value={tabLanguage}
+                              value={chatLanguage}
                               onChange={(e) => handleLanguageChange(e.target.value)}
                               className="px-3 py-2 border-2 border-gray-200 rounded-xl text-sm focus:border-blue-500 outline-none"
+
                             >
                               <option value="english">English</option>
                               <option value="hindi">Hindi</option>
@@ -3324,13 +3662,14 @@ export default function Home() {
                               <option value="japanese">Japanese</option>
                               <option value="chinese">chinese</option>
                             </select>
-                        
+
                             <button
                               onClick={handleTranslate}
                               className="px-3 py-2 border-2 border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all"
                             >
                               Translate
                             </button>
+                        
                           </div>
 
 
@@ -3366,16 +3705,27 @@ export default function Home() {
                               </div>
                             )}
                           </div>
-
                        
                         </div>
 
-
-                        <div className="flex-1 min-h-0 overflow-y-auto bg-white px-4 py-4 sm:px-6 sm:py-5">
-                          <div className="prose prose-sm sm:prose max-w-none leading-7 prose-headings:mb-3 prose-headings:text-slate-900 prose-p:my-3 prose-p:text-slate-700 prose-strong:text-slate-900 prose-strong:font-semibold prose-li:my-1 prose-li:text-slate-700">
+                        <div
+                          className={cn(
+                            "flex-1 min-h-0 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5",
+                            theme === "dark" ? "bg-slate-900" : "bg-white"
+                          )}
+                        >
+                          <div
+                            className={cn(
+                              "prose prose-sm sm:prose max-w-none leading-7 prose-headings:mb-3 prose-strong:font-semibold prose-li:my-1 prose-p:my-3",
+                              theme === "dark"
+                                ? "prose-headings:text-slate-100 prose-p:text-slate-300 prose-strong:text-slate-100 prose-li:text-slate-300"
+                                : "prose-headings:text-slate-900 prose-p:text-slate-700 prose-strong:text-slate-900 prose-li:text-slate-700"
+                            )}
+                          >
                             <ReactMarkdown>{cleanContent}</ReactMarkdown>
                           </div>
                         </div>
+
 
                       </>
                     )}
@@ -3384,21 +3734,44 @@ export default function Home() {
 
                 {/* Concepts Tab */}
                 {activeTab === "concepts" && (
-                  <div className="flex h-full min-h-0 flex-col bg-white">
+
+
+                  <div
+                    className={cn(
+                      "flex h-full min-h-0 flex-col",
+                      theme === "dark" ? "bg-slate-900" : "bg-white"
+                    )}
+                  >
+
                     {isTabLoading ? (
-                      <div className="flex items-center justify-between gap-3 border-b border-slate-100 bg-white px-4 py-3 sm:px-5">
-                        <Loader2 className="w-8 h-8 animate-spin text-blue-600 mb-4" />
-                        <p className="text-gray-600">Extracting key concepts...</p>
+
+                      <div
+                        className={cn(
+                          "flex items-center justify-between gap-3 border-b px-4 py-3 sm:px-5",
+                          theme === "dark"
+                            ? "border-slate-800 bg-slate-900"
+                            : "border-slate-100 bg-white"
+                        )}
+                      >
                       </div>
                     ) : (
                       <>
 
-                        <div className="flex items-center justify-between gap-3 border-b border-slate-100 bg-white px-4 py-3 sm:px-5">
+                        <div
+                          className={cn(
+                            "flex items-center justify-between gap-1 border-b px-4 py-4 sm:px-5 sm:py-3",
+                            theme === "dark"
+                              ? "border-slate-800 bg-slate-900"
+                              : "border-slate-100 bg-white"
+                          )}
+                        >
+
                           <div className="flex items-center gap-2">
                             <select
-                              value={tabLanguage}
+                              value={chatLanguage}
                               onChange={(e) => handleLanguageChange(e.target.value)}
                               className="px-3 py-2 border-2 border-gray-200 rounded-xl text-sm focus:border-blue-500 outline-none"
+
                             >
                               <option value="english">English</option>
                               <option value="hindi">Hindi</option>
@@ -3452,8 +3825,20 @@ export default function Home() {
 
                         </div>
 
-                        <div className="flex-1 min-h-0 overflow-y-auto bg-white px-4 py-4 sm:px-6 sm:py-5">
-                          <div className="prose prose-sm sm:prose max-w-none leading-7 prose-headings:mb-3 prose-headings:text-slate-900 prose-p:my-3 prose-p:text-slate-700 prose-strong:text-slate-900 prose-strong:font-semibold prose-li:my-1 prose-li:text-slate-700">
+                        <div
+                          className={cn(
+                            "flex-1 min-h-0 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5",
+                            theme === "dark" ? "bg-slate-900" : "bg-white"
+                          )}
+                        >
+                          <div
+                            className={cn(
+                              "prose prose-sm sm:prose max-w-none leading-7 prose-headings:mb-3 prose-strong:font-semibold prose-li:my-1 prose-p:my-3",
+                              theme === "dark"
+                                ? "prose-headings:text-slate-100 prose-p:text-slate-300 prose-strong:text-slate-100 prose-li:text-slate-300"
+                                : "prose-headings:text-slate-900 prose-p:text-slate-700 prose-strong:text-slate-900 prose-li:text-slate-700"
+                            )}
+                          >
                             <ReactMarkdown>{translatedTabContent || tabContent}</ReactMarkdown>
                           </div>
                         </div>
@@ -3466,96 +3851,126 @@ export default function Home() {
 
                 {/* Practice Tab */}
                 {activeTab === "practice" && (
-                  <div className="flex h-full min-h-0 flex-col bg-white">
-                    <div className="flex-1 min-h-0 overflow-y-auto bg-white">
-                      {isTabLoading ? (
-                        <div className="flex items-center justify-between gap-3 border-b border-slate-100 bg-white px-4 py-3 sm:px-5">
-                          <Loader2 className="w-8 h-8 animate-spin text-blue-600 mb-4" />
-                          <p className="text-gray-600">Creating practice questions...</p>
-                        </div>
-                      ) : (
-                        <>
-                          <div className="flex items-center justify-between gap-3 border-b border-slate-100 bg-white px-4 py-3 sm:px-5">
-                            <div className="flex items-center gap-2">
-                              <select
-                                value={tabLanguage}
-                                onChange={(e) => handleLanguageChange(e.target.value)}
-                                className="px-3 py-2 border-2 border-gray-200 rounded-xl text-sm focus:border-blue-500 outline-none"
-                              >
-                                <option value="english">English</option>
-                                <option value="hindi">Hindi</option>
-                                <option value="french">French</option>
-                                <option value="german">German</option>
-                                <option value="spanish">Spanish</option>
-                                <option value="arabic">Arabic</option>
-                                <option value="japanese">Japanese</option>
-                                <option value="chinese">chinese</option>
-                              </select>
-                
-                              <button
-                                onClick={handleTranslate}
-                                className="px-3 py-2 border-2 border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all"
-                              >
-                                Translate
-                              </button>
-                            </div>
-                
-                            <div className="flex flex-col items-end gap-1">
-                              <button
-                                onClick={handleSpeakTab}
-                                disabled={isAudioLoading}
-                                className={cn(
-                                  "p-2 rounded-xl transition-colors flex items-center gap-2",
-                                  isAudioLoading
-                                    ? "bg-gray-100 text-gray-500 cursor-not-allowed"
-                                    : isTabSpeaking
-                                      ? "bg-blue-100 text-blue-600"
-                                      : "text-gray-400 hover:text-gray-600 hover:bg-gray-100"
-                                )}
-                              >
-                                {isAudioLoading ? (
-                                  <>
-                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                    <span className="text-sm">Processing...</span>
-                                  </>
-                                ) : isTabSpeaking ? (
-                                  <VolumeX className="w-5 h-5" />
-                                ) : (
-                                  <Volume2 className="w-5 h-5" />
-                                )}
-                              </button>
-  
-                              {audioLimitMessage && (
-                                <div className="max-w-[240px] text-right text-[11px] leading-4 text-rose-600">
-                                  {audioLimitMessage}
-                                </div>
+                  <div
+                    className={cn(
+                      "flex h-full min-h-0 flex-col",
+                      theme === "dark" ? "bg-slate-900" : "bg-white"
+                    )}
+                  >
+
+                    {isTabLoading ? (
+
+                      <div
+                        className={cn(
+                          "flex items-center justify-between gap-3 border-b px-4 py-3 sm:px-5",
+                          theme === "dark"
+                            ? "border-slate-800 bg-slate-900"
+                            : "border-slate-100 bg-white"
+                        )}
+                      >
+                      </div>
+                    ) : (
+                      <>
+
+                        <div
+                          className={cn(
+                            "flex items-center justify-between gap-1 border-b px-4 py-4 sm:px-5 sm:py-3",
+                            theme === "dark"
+                              ? "border-slate-800 bg-slate-900"
+                              : "border-slate-100 bg-white"
+                          )}
+                        >
+
+
+                          <div className="flex items-center gap-2">
+                            <select
+                              value={chatLanguage}
+                              onChange={(e) => handleLanguageChange(e.target.value)}
+                              className="px-3 py-2 border-2 border-gray-200 rounded-xl text-sm focus:border-blue-500 outline-none"
+
+                            >
+
+                              <option value="english">English</option>
+                              <option value="hindi">Hindi</option>
+                              <option value="french">French</option>
+                              <option value="german">German</option>
+                              <option value="spanish">Spanish</option>
+                              <option value="arabic">Arabic</option>
+                              <option value="japanese">Japanese</option>
+                              <option value="chinese">chinese</option>
+                            </select>
+
+                            <button
+                              onClick={handleTranslate}
+                              className="px-3 py-2 border-2 border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all"
+                            >
+                              Translate
+                            </button>
+                          </div>
+
+                          <div className="flex flex-col items-end gap-1">
+                            <button
+                              onClick={handleSpeakTab}
+                              disabled={isAudioLoading}
+                              className={cn(
+                                "p-2 rounded-xl transition-colors flex items-center gap-2",
+                                isAudioLoading
+                                  ? "bg-gray-100 text-gray-500 cursor-not-allowed"
+                                  : isTabSpeaking
+                                  ? "bg-blue-100 text-blue-600"
+                                  : "text-gray-400 hover:text-gray-600 hover:bg-gray-100"
                               )}
-                            </div>
+                            >
+                              {isAudioLoading ? (
+                                <>
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                  <span className="text-sm">Processing...</span>
+                                </>
+                              ) : isTabSpeaking ? (
+                                <VolumeX className="h-5 w-5" />
+                              ) : (
+                                <Volume2 className="h-5 w-5" />
+                              )}
+                            </button>
 
+                            {audioLimitMessage && (
+                              <div className="max-w-[240px] text-right text-[11px] leading-4 text-rose-600">
+                                {audioLimitMessage}
+                              </div>
+                            )}
                           </div>
+                        </div>
 
-                          <div className="flex-1 min-h-0 overflow-y-auto bg-white px-4 py-4 sm:px-6 sm:py-5">
-
-                          <div className="px-4 py-4 sm:px-6 sm:py-5">
-
-
-                            <div className="prose prose-sm sm:prose max-w-none leading-8 prose-headings:mb-4 prose-headings:text-slate-900 prose-p:my-4 prose-p:text-slate-700 prose-strong:text-slate-900 prose-strong:font-semibold prose-li:my-3 prose-li:text-slate-700">
-                              <ReactMarkdown>{cleanContent}</ReactMarkdown>
-                            </div>
-
-
+                        <div
+                          className={cn(
+                            "flex-1 min-h-0 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5",
+                            theme === "dark" ? "bg-slate-900" : "bg-white"
+                          )}
+                        >
+                          <div
+                            className={cn(
+                              "prose prose-sm sm:prose max-w-none leading-8 prose-headings:mb-4 prose-strong:font-semibold prose-li:my-3 prose-p:my-4",
+                              theme === "dark"
+                                ? "prose-headings:text-slate-100 prose-p:text-slate-300 prose-strong:text-slate-100 prose-li:text-slate-300"
+                                : "prose-headings:text-slate-900 prose-p:text-slate-700 prose-strong:text-slate-900 prose-li:text-slate-700"
+                            )}
+                          >
+                            <ReactMarkdown>{cleanContent}</ReactMarkdown>
                           </div>
+                        </div>
+                      </>
+                    )}
 
-                          </div>
-                
-                        </>
+                    <div
+                      className={cn(
+                        "border-t px-4 py-4 sm:px-5",
+                        theme === "dark"
+                          ? "border-slate-800 bg-slate-900"
+                          : "border-slate-200 bg-white"
                       )}
-                    </div>
-                
-                    <div className="border-t border-slate-200 bg-white px-4 py-4 sm:px-5">
+                    >
                       <div className="flex items-end gap-2">
                         <div className="flex-1 relative">
-
                           <textarea
                             value={question}
                             onChange={(e) => setQuestion(e.target.value)}
@@ -3571,10 +3986,14 @@ export default function Home() {
                               }
                             }}
                             placeholder="Ask about these practice questions..."
-                            className="w-full px-4 py-3 pr-12 border-2 border-gray-200 rounded-xl resize-none overflow-y-auto focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all min-h-[52px] max-h-40"
+                            className={cn(
+                              "w-full px-4 py-3 pr-12 border-2 rounded-xl resize-none overflow-y-auto focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all min-h-[52px] max-h-40",
+                              theme === "dark"
+                                ? "bg-slate-950 border-slate-700 !text-white caret-white placeholder:!text-slate-400"
+                                : "bg-white border-gray-200 !text-slate-900 caret-slate-900 placeholder:!text-slate-400"
+                            )}
                             rows={1}
                           />
-
 
                           <button
                             onClick={handleVoiceInput}
@@ -3588,7 +4007,7 @@ export default function Home() {
                             <Mic className="w-5 h-5" />
                           </button>
                         </div>
-                
+
                         {isStreaming ? (
                           <button
                             onClick={handleStopAnswer}
@@ -3613,7 +4032,13 @@ export default function Home() {
 
                 {/* Mock Test Tab */}
                 {activeTab === "mock" && (
-                  <div className="h-full min-h-0 overflow-y-auto bg-white px-4 py-3 sm:px-5 sm:py-4">
+
+                  <div
+                    className={cn(
+                      "h-full min-h-0 overflow-y-auto px-4 py-3 sm:px-5 sm:py-4",
+                      theme === "dark" ? "bg-slate-900" : "bg-white"
+                    )}
+                  >
 
                     <div className="flex items-center justify-center gap-2 pb-3 pt-1">
 
@@ -3643,7 +4068,10 @@ export default function Home() {
                             "px-4 py-2 rounded-xl text-sm font-medium border-2 transition-all",
                             mockDifficulty === level.value
                               ? "bg-gradient-to-r from-blue-600 to-teal-600 text-white border-transparent shadow-md"
-                              : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
+                              : theme === "dark"
+                                ? "bg-slate-900 text-slate-100 border-slate-700 hover:bg-slate-800"
+                                : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
+
                           )}
                         >
                           {level.label}
@@ -3654,15 +4082,21 @@ export default function Home() {
                     {isTabLoading ? (
                       <div className="flex flex-col items-center justify-center py-12">
                         <Loader2 className="w-8 h-8 animate-spin text-blue-600 mb-4" />
-                        <p className="text-gray-600">Generating mock test...</p>
+                        <p className={theme === "dark" ? "text-slate-300" : "text-gray-600"}>
+                          Generating mock test...
+                        </p>
                       </div>
                     ) : quizData.length === 0 ? (
                       <div className="flex flex-col items-center justify-center py-12">
                         <div className="p-4 bg-gradient-to-br from-blue-100 to-teal-100 rounded-2xl mb-4">
                           <Award className="w-8 h-8 text-blue-600" />
                         </div>
-                        <h3 className="text-lg font-semibold text-gray-900 mb-2">No quiz available</h3>
-                        <p className="text-gray-500 mb-6 max-w-sm text-center">
+
+                        <h3 className={cn("text-lg font-semibold mb-2", theme === "dark" ? "text-slate-100" : "text-gray-900")}>
+                          No quiz available
+                        </h3>
+
+                        <p className={cn("mb-6 max-w-sm text-center", theme === "dark" ? "text-slate-400" : "text-gray-500")}>
                           Click the Mock Test tab to generate a quiz from your document.
                         </p>
                       </div>
@@ -3691,17 +4125,21 @@ export default function Home() {
                               )}
                             />
                           </div>
-                          <h2 className="text-2xl font-bold text-gray-900 mb-2">Test Complete!</h2>
-                          <p className="text-4xl font-bold text-gray-900">
+
+                          <h2 className={cn("text-2xl font-bold mb-2", theme === "dark" ? "text-slate-100" : "text-gray-900")}>
+                            Test Complete!
+                          </h2>
+
+                          <p className={cn("text-4xl font-bold", theme === "dark" ? "text-slate-100" : "text-gray-900")}>
                             {quizScore} / {quizData.length}
                           </p>
-                          <p className="text-gray-500 mt-1">
+                          <p className={cn("mt-1", theme === "dark" ? "text-slate-400" : "text-gray-500")}>
                             {Math.round((quizScore / quizData.length) * 100)}% Correct
                           </p>
                         </div>
 
                         {/* Progress Bar */}
-                        <div className="h-3 bg-gray-100 rounded-full mb-6 overflow-hidden">
+                        <div className={cn("h-3 rounded-full mb-6 overflow-hidden", theme === "dark" ? "bg-slate-800" : "bg-gray-100")}>
                           <div
                             className={cn(
                               "h-full rounded-full transition-all duration-500",
@@ -3725,9 +4163,15 @@ export default function Home() {
                                 key={idx}
                                 className={cn(
                                   "p-4 rounded-xl border-2",
+
                                   isCorrect
-                                    ? "border-green-200 bg-green-50"
-                                    : "border-red-200 bg-red-50"
+                                    ? theme === "dark"
+                                      ? "border-green-800 bg-green-950/40"
+                                      : "border-green-200 bg-green-50"
+                                    : theme === "dark"
+                                      ? "border-red-800 bg-red-950/40"
+                                      : "border-red-200 bg-red-50"
+
                                 )}
                               >
                                 <div className="flex items-start gap-3">
@@ -3737,21 +4181,25 @@ export default function Home() {
                                     <XCircle className="w-5 h-5 text-red-600 mt-0.5" />
                                   )}
                                   <div className="flex-1">
-                                    <p className="font-medium text-gray-900 mb-2">
+                                    <p className={cn("font-medium mb-2", theme === "dark" ? "text-slate-100" : "text-gray-900")}>
                                       {idx + 1}. {q.question}
                                     </p>
-                                    <p className="text-sm text-gray-600">
+                                    <p className={cn("text-sm", theme === "dark" ? "text-slate-300" : "text-gray-600")}>
                                       <span className="font-medium">Correct answer:</span>{" "}
                                       {q.options[q.correctAnswer]}
                                     </p>
                                     {!isCorrect && (
-                                      <p className="text-sm text-red-600 mt-1">
+                                      <p className={cn("text-sm mt-1", theme === "dark" ? "text-red-300" : "text-red-600")}>
                                         <span className="font-medium">Your answer:</span>{" "}
                                         {selectedIdx >= 0 ? q.options[selectedIdx] : "Not answered"}
                                       </p>
                                     )}
                                     {q.explanation && (
-                                      <p className="text-sm text-gray-500 mt-2 italic">{q.explanation}</p>
+
+                                      <p className={cn("text-sm mt-2 italic", theme === "dark" ? "text-slate-400" : "text-gray-500")}>
+                                        {q.explanation}
+                                      </p>
+
                                     )}
                                   </div>
                                 </div>
@@ -3776,13 +4224,13 @@ export default function Home() {
                       <div className="max-w-2xl mx-auto">
                         {/* Progress */}
                         <div className="flex items-center justify-between mb-4">
-                          <span className="text-sm text-gray-500">
+                          <span className={cn("text-sm", theme === "dark" ? "text-slate-400" : "text-gray-500")}>
                             Question {currentQ + 1} of {quizData.length}
                           </span>
                         </div>
 
                         {/* Progress Bar */}
-                        <div className="h-2 bg-gray-100 rounded-full mb-5 overflow-hidden">
+                        <div className={cn("h-2 rounded-full mb-5 overflow-hidden", theme === "dark" ? "bg-slate-800" : "bg-gray-100")}>
                           <div
                             className="h-full bg-gradient-to-r from-blue-600 to-teal-600 rounded-full transition-all duration-300"
                             style={{ width: `${((currentQ + 1) / quizData.length) * 100}%` }}
@@ -3791,7 +4239,7 @@ export default function Home() {
 
                         {/* Question */}
                         <div className="mb-8">
-                          <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">
+                          <h3 className={cn("text-base sm:text-lg font-semibold mb-4", theme === "dark" ? "text-slate-100" : "text-gray-900")}>
                             {quizData[currentQ]?.question}
                           </h3>
 
@@ -3802,25 +4250,35 @@ export default function Home() {
                                 onClick={() => setQuizAnswers({ ...quizAnswers, [currentQ]: String(idx) })}
                                 className={cn(
                                   "w-full text-left p-3.5 rounded-xl border-2 transition-all duration-200",
+
                                   quizAnswers[currentQ] === String(idx)
-                                    ? "border-blue-500 bg-blue-50"
-                                    : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                                    ? theme === "dark"
+                                      ? "border-blue-500 bg-blue-950/40"
+                                      : "border-blue-500 bg-blue-50"
+                                    : theme === "dark"
+                                      ? "border-slate-700 bg-slate-900 hover:border-slate-600 hover:bg-slate-800"
+                                      : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+
                                 )}
                               >
                                 <div className="flex items-center gap-3">
                                   <div
                                     className={cn(
                                       "w-6 h-6 rounded-full border-2 flex items-center justify-center",
+
                                       quizAnswers[currentQ] === String(idx)
                                         ? "border-blue-500 bg-blue-500"
-                                        : "border-gray-300"
+                                        : theme === "dark"
+                                          ? "border-slate-600"
+                                          : "border-gray-300"
+
                                     )}
                                   >
                                     {quizAnswers[currentQ] === String(idx) && (
                                       <div className="w-2 h-2 bg-white rounded-full" />
                                     )}
                                   </div>
-                                  <span className="text-gray-900">{option}</span>
+                                  <span className={theme === "dark" ? "text-slate-100" : "text-gray-900"}>{option}</span>
                                 </div>
                               </button>
                             ))}
@@ -3828,11 +4286,24 @@ export default function Home() {
                         </div>
 
                         {/* Navigation */}
-                        <div className="sticky bottom-0 flex items-center justify-between gap-3 bg-white pt-4">
+
+                        <div
+                          className={cn(
+                            "sticky bottom-0 flex items-center justify-between gap-3 pt-4",
+                            theme === "dark" ? "bg-slate-900" : "bg-white"
+                          )}
+                        >
                           <button
                             onClick={() => setCurrentQ(Math.max(0, currentQ - 1))}
                             disabled={currentQ === 0}
-                            className="flex items-center gap-1 px-4 py-2 text-gray-600 font-medium rounded-xl hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+
+                            className={cn(
+                              "flex items-center gap-1 px-4 py-2 font-medium rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-colors",
+                              theme === "dark"
+                                ? "text-slate-300 hover:bg-slate-800"
+                                : "text-gray-600 hover:bg-gray-100"
+                            )}
+
                           >
                             <ChevronLeft className="w-4 h-4" />
                             Previous
@@ -3859,6 +4330,10 @@ export default function Home() {
                     )}
                   </div>
                 )}
+
+
+
+
               </div>
             </div>
           )}
