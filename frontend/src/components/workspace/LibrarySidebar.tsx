@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { BookOpen, FileText, Globe, Library, Pencil, Plus, Trash2, Video, X } from "lucide-react";
+import { BookOpen, ChevronLeft, ChevronRight, FileText, Globe, Library, Pencil, Plus, Trash2, Video, X } from "lucide-react";
 
 function cn(...classes: (string | boolean | undefined | null)[]) {
   return classes.filter(Boolean).join(" ");
@@ -19,12 +19,15 @@ type LibrarySidebarProps = {
   library: LibrarySidebarItem[];
   activeId: string;
   showCloseButton?: boolean;
+  isCollapsed?: boolean;
+  onToggleCollapsed?: () => void;
   onCloseSidebar: () => void;
   onStartNewDocument: () => void;
   onSelectItem: (id: string) => void;
   onRenameItem: (id: string) => void;
   onDeleteItem: (id: string) => void;
   footer?: ReactNode;
+  bottomContent?: ReactNode;
 };
 
 export function LibrarySidebar({
@@ -32,16 +35,98 @@ export function LibrarySidebar({
   library,
   activeId,
   showCloseButton = false,
+  isCollapsed = false,
+  onToggleCollapsed,
   onCloseSidebar,
   onStartNewDocument,
   onSelectItem,
   onRenameItem,
   onDeleteItem,
   footer,
+  bottomContent,
 }: LibrarySidebarProps) {
+  if (isCollapsed) {
+    return (
+      <div className="flex h-full flex-col items-center py-3">
+        <button
+          onClick={onToggleCollapsed}
+          className={cn(
+            "mb-3 hidden h-8 w-8 items-center justify-center rounded-lg border lg:flex",
+            theme === "dark"
+              ? "border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800"
+              : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+          )}
+          aria-label="Expand library sidebar"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </button>
+
+        <button
+          onClick={onStartNewDocument}
+          className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-r from-blue-600 to-teal-600 text-white shadow-md"
+          aria-label="New document"
+        >
+          <Plus className="h-4 w-4" />
+        </button>
+
+        <button
+          onClick={onCloseSidebar}
+          className={cn(
+            "mb-3 flex h-8 w-8 items-center justify-center rounded-lg lg:hidden",
+            theme === "dark"
+              ? "text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+              : "text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+          )}
+          aria-label="Close library panel"
+        >
+          <X className="h-4 w-4" />
+        </button>
+
+        <div className="mt-1 flex flex-col items-center gap-3">
+          {library.slice(0, 6).map((item) => (
+            <button
+              key={item.id}
+              onClick={() => onSelectItem(item.id)}
+              className={cn(
+                "flex h-9 w-9 items-center justify-center rounded-lg border transition-colors",
+                activeId === item.id
+                  ? "border-blue-500 bg-blue-500/20 text-blue-500"
+                  : theme === "dark"
+                  ? "border-slate-700 bg-slate-900 text-slate-300 hover:bg-slate-800"
+                  : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+              )}
+              aria-label={item.name}
+              title={item.name}
+            >
+              {item.type === "VIDEO" ? (
+                <Video className="h-4 w-4 text-red-600" />
+              ) : item.type === "WEB" ? (
+                <Globe className="h-4 w-4 text-teal-600" />
+              ) : (
+                <FileText className="h-4 w-4 text-blue-600" />
+              )}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-full flex-col">
       <div className="p-4 space-y-2">
+        <button
+          onClick={onToggleCollapsed}
+          className={cn(
+            "hidden h-8 w-8 items-center justify-center rounded-lg border lg:flex",
+            theme === "dark"
+              ? "border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800"
+              : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+          )}
+          aria-label="Collapse library sidebar"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </button>
         <button
           onClick={onStartNewDocument}
           className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-teal-600 text-white font-medium rounded-xl hover:from-blue-700 hover:to-teal-700 shadow-md hover:shadow-lg transition-all duration-200"
@@ -178,6 +263,17 @@ export function LibrarySidebar({
 
         {footer}
       </div>
+
+      {bottomContent && (
+        <div
+          className={cn(
+            "border-t px-3 py-3",
+            theme === "dark" ? "border-slate-800 bg-slate-950" : "border-slate-200 bg-white"
+          )}
+        >
+          {bottomContent}
+        </div>
+      )}
     </div>
   );
 }

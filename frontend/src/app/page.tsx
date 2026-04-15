@@ -112,6 +112,8 @@ export default function Home() {
   const [pastedText, setPastedText] = useState("");
   const [urlInput, setUrlInput] = useState("");
   const [showSidebar, setShowSidebar] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isStudyExpanded, setIsStudyExpanded] = useState(false);
   const [showScreenshotPasteBox, setShowScreenshotPasteBox] = useState(false);
   const API = process.env.NEXT_PUBLIC_API_URL;
 
@@ -1322,14 +1324,13 @@ export default function Home() {
         setIsAsking(false);
         return;
       }
-  
+
       if (activeTab !== "chat" && activeTab !== "practice") {
         alert("Questions are only supported in Chat and Practice tabs.");
         setIsAsking(false);
         return;
       }
-
-
+  
       if (activeId) {
         setLibrary((prev) =>
           prev.map((item) =>
@@ -1353,15 +1354,9 @@ export default function Home() {
         ]);
       }
   
-      const docText = isGeneralChat
-        ? ""
-        : activeTab === "practice"
+      const docText = activeTab === "practice"
         ? tabContent || activeItem?.documentText || ""
         : activeItem?.documentText || "";
-  
-      if (activeTab === "practice") {
-        setActiveTab("chat");
-      }
   
       const chatHistoryText = isGeneralChat
         ? ""
@@ -2337,14 +2332,6 @@ export default function Home() {
 
   const handleSignOut = async () => {
     try {
-      if (userActiveIdKey) {
-        localStorage.removeItem(userActiveIdKey);
-      }
-
-      if (userLibraryKey) {
-        localStorage.removeItem(userLibraryKey);
-      }
-
       setShowAuthModal(false);
       setAuthMessage("");
       setShowSidebar(false);
@@ -2380,6 +2367,15 @@ export default function Home() {
       isTabLoading={isTabLoading}
       tabContent={tabContent}
       translatedTabContent={translatedTabContent}
+      cleanContent={cleanContent}
+      activeId={activeId}
+      audioLimitMessage={audioLimitMessage}
+      chatLanguage={chatLanguage}
+      onLanguageChange={handleLanguageChange}
+      onTranslate={handleTranslate}
+      onSpeakTab={handleSpeakTab}
+      isAudioLoading={isAudioLoading}
+      isTabSpeaking={isTabSpeaking}
       mockDifficulty={mockDifficulty}
       allowedMockDifficulties={allowedMockDifficulties}
       onSelectMockDifficulty={(difficulty) => {
@@ -2391,8 +2387,23 @@ export default function Home() {
         handleTabClick("mock", difficulty);
       }}
       quizData={quizData}
+      quizAnswers={quizAnswers}
+      onQuizAnswersChange={setQuizAnswers}
       quizScore={quizScore}
+      onQuizScoreChange={setQuizScore}
       currentQ={currentQ}
+      onCurrentQChange={setCurrentQ}
+      onQuizSubmit={handleQuizSubmit}
+      question={question}
+      onQuestionChange={setQuestion}
+      onAsk={handleAsk}
+      isAsking={isAsking}
+      isStreaming={isStreaming}
+      onStopAnswer={handleStopAnswer}
+      onVoiceInput={handleVoiceInput}
+      isListening={isListening}
+      isExpanded={isStudyExpanded}
+      onToggleExpanded={() => setIsStudyExpanded((prev) => !prev)}
     />
   );
 
@@ -2876,13 +2887,17 @@ export default function Home() {
       <WorkspaceShell
         theme={theme}
         showSidebar={showSidebar}
+        isSidebarCollapsed={isSidebarCollapsed}
+        isStudyExpanded={isStudyExpanded}
         onSidebarOverlayClick={() => setShowSidebar(false)}
-        showRightPanel={Boolean(activeId)}
+        showRightPanel={true}
         sidebar={
           <LibrarySidebar
             theme={theme}
             library={library}
             activeId={activeId}
+            isCollapsed={isSidebarCollapsed}
+            onToggleCollapsed={() => setIsSidebarCollapsed((prev) => !prev)}
             showCloseButton
             onCloseSidebar={() => setShowSidebar(false)}
             onStartNewDocument={startNewChat}
@@ -2894,11 +2909,11 @@ export default function Home() {
             }}
             onRenameItem={handleRename}
             onDeleteItem={handleDeleteItem}
-            footer={
+            bottomContent={
               user && (
                 <div
                   className={cn(
-                    "mb-4 rounded-2xl border px-4 py-4 shadow-sm transition-colors duration-300",
+                    "rounded-xl border px-2.5 py-2 shadow-sm transition-colors duration-300",
                     theme === "dark"
                       ? "border-slate-700 bg-slate-900"
                       : "border-slate-200 bg-white/80"
@@ -2915,7 +2930,7 @@ export default function Home() {
                     >
                       <div
                         className={cn(
-                          "flex h-12 w-12 items-center justify-center rounded-full text-white font-semibold uppercase shrink-0",
+                          "flex h-8 w-8 items-center justify-center rounded-full text-white text-xs font-semibold uppercase shrink-0",
                           theme === "dark" ? "bg-slate-600" : "bg-slate-400"
                         )}
                       >
@@ -2925,7 +2940,7 @@ export default function Home() {
                       <div className="min-w-0 flex-1">
                         <div
                           className={cn(
-                            "truncate text-sm font-semibold",
+                            "truncate text-xs font-semibold",
                             theme === "dark" ? "text-slate-100" : "text-slate-900"
                           )}
                         >
@@ -2934,7 +2949,7 @@ export default function Home() {
               
                         <div
                           className={cn(
-                            "mt-1 text-xs font-medium",
+                            "mt-0.5 text-[11px] font-medium",
                             theme === "dark" ? "text-slate-300" : "text-slate-600"
                           )}
                         >
@@ -2995,7 +3010,7 @@ export default function Home() {
                       <button
                         onClick={() => setShowPlansModal(true)}
                         className={cn(
-                          "w-full rounded-xl border px-3 py-2 text-sm font-semibold transition",
+                          "w-full rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition",
                           theme === "dark"
                             ? "border-slate-700 bg-slate-800 text-slate-100 hover:bg-slate-700"
                             : "border-slate-300 bg-white text-slate-800 hover:bg-slate-50"
@@ -3010,7 +3025,7 @@ export default function Home() {
                             onClick={handleManageSubscription}
                             disabled={isBillingLoading}
                             className={cn(
-                              "w-full rounded-xl border px-3 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-70",
+                              "w-full rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-70",
                               theme === "dark"
                                 ? "border-slate-700 bg-slate-800 text-slate-100 hover:bg-slate-700"
                                 : "border-slate-300 bg-white text-slate-800 hover:bg-slate-50"
@@ -3023,7 +3038,7 @@ export default function Home() {
                             onClick={handleCancelSubscription}
                             disabled={isBillingLoading}
                             className={cn(
-                              "w-full rounded-xl border px-3 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-70",
+                              "w-full rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-70",
                               theme === "dark"
                                 ? "border-rose-900 bg-rose-950/40 text-rose-300 hover:bg-rose-950/60"
                                 : "border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100"
@@ -3038,7 +3053,7 @@ export default function Home() {
               
                   <div
                     className={cn(
-                      "mt-2 text-[11px] leading-4",
+                      "mt-1 text-[10px] leading-4",
                       theme === "dark" ? "text-slate-400" : "text-slate-500"
                     )}
                   >
@@ -3332,8 +3347,13 @@ export default function Home() {
                 )}
               >
                 {/* Chat Tab */}
-                {activeTab === "chat" && (
-                  <div className="flex h-full min-h-0 flex-col bg-white">
+                {(activeId || activeTab === "chat") && (
+                  <div
+                    className={cn(
+                      "h-full min-h-0 flex-col bg-white",
+                      activeTab === "chat" ? "flex" : "hidden lg:flex"
+                    )}
+                  >
 
                     <div
                       className={cn(
@@ -3551,11 +3571,11 @@ export default function Home() {
 
 
                 {/* Summary Tab */}
-                {activeTab === "summary" && !activeId && (
+                {activeTab === "summary" && (
 
                   <div
                     className={cn(
-                      "flex h-full min-h-0 flex-col",
+                      "flex h-full min-h-0 flex-col lg:hidden",
                       theme === "dark" ? "bg-slate-900" : "bg-white"
                     )}
                   >
@@ -3671,12 +3691,12 @@ export default function Home() {
                 )}
 
                 {/* Concepts Tab */}
-                {activeTab === "concepts" && !activeId && (
+                {activeTab === "concepts" && (
 
 
                   <div
                     className={cn(
-                      "flex h-full min-h-0 flex-col",
+                      "flex h-full min-h-0 flex-col lg:hidden",
                       theme === "dark" ? "bg-slate-900" : "bg-white"
                     )}
                   >
@@ -3788,10 +3808,10 @@ export default function Home() {
 
 
                 {/* Practice Tab */}
-                {activeTab === "practice" && !activeId && (
+                {activeTab === "practice" && (
                   <div
                     className={cn(
-                      "flex h-full min-h-0 flex-col",
+                      "flex h-full min-h-0 flex-col lg:hidden",
                       theme === "dark" ? "bg-slate-900" : "bg-white"
                     )}
                   >
@@ -3969,11 +3989,11 @@ export default function Home() {
 
 
                 {/* Mock Test Tab */}
-                {activeTab === "mock" && !activeId && (
+                {activeTab === "mock" && (
 
                   <div
                     className={cn(
-                      "h-full min-h-0 overflow-y-auto px-4 py-3 sm:px-5 sm:py-4",
+                      "h-full min-h-0 overflow-y-auto px-4 py-3 sm:px-5 sm:py-4 lg:hidden",
                       theme === "dark" ? "bg-slate-900" : "bg-white"
                     )}
                   >
