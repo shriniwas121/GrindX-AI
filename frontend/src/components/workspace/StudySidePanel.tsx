@@ -1,6 +1,6 @@
 "use client";
 
-import { Award, BookOpen, Brain, CheckCircle2, Loader2, Maximize2, MessageSquare, Minimize2, Target, X, XCircle } from "lucide-react";
+import { Award, BookOpen, Brain, CheckCircle2, Loader2, Maximize2, MessageSquare, Minimize2, PanelRightClose, PanelRightOpen, Target, X, XCircle } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 
 function cn(...classes: (string | boolean | undefined | null)[]) {
@@ -113,7 +113,9 @@ export function StudySidePanel({
                       ? "border-slate-700 bg-slate-800 text-slate-200 hover:bg-slate-700"
                       : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
                   )}
+                  title={isCollapsed ? "Expand right panel" : "Collapse right panel"}
                 >
+                  {isCollapsed ? <PanelRightOpen className="h-3.5 w-3.5" /> : <PanelRightClose className="h-3.5 w-3.5" />}
                   {isCollapsed ? "Expand panel" : "Collapse panel"}
                 </button>
               )}
