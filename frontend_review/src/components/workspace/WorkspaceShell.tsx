@@ -49,7 +49,7 @@ export function WorkspaceShell({
   return (
     <div
       className={cn(
-        "relative h-[calc(100vh-4rem)] min-h-0",
+        "h-[calc(100vh-4rem)] min-h-0",
         theme === "dark" ? "bg-slate-950" : "bg-slate-50"
       )}
     >
@@ -59,12 +59,6 @@ export function WorkspaceShell({
           onClick={onSidebarOverlayClick}
         />
       )}
-      <div
-        className={cn(
-          "pointer-events-none absolute inset-x-0 top-0 z-20 h-px",
-          theme === "dark" ? "bg-slate-950" : "bg-slate-50"
-        )}
-      />
 
       <div
         className={cn(

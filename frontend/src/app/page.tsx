@@ -3436,10 +3436,10 @@ export default function Home() {
 
                     <div
                       className={cn(
-                        "border-t px-4 py-3 sm:px-5",
+                        "px-4 py-3 sm:px-5",
                         theme === "dark"
-                          ? "border-slate-800 bg-slate-900"
-                          : "border-slate-200 bg-white"
+                          ? "bg-slate-900"
+                          : "bg-white"
                       )}
                     >
 

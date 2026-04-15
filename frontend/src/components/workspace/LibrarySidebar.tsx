@@ -267,8 +267,8 @@ export function LibrarySidebar({
       {bottomContent && (
         <div
           className={cn(
-            "border-t px-3 py-3",
-            theme === "dark" ? "border-slate-800 bg-slate-950" : "border-slate-200 bg-white"
+            "px-3 py-3",
+            theme === "dark" ? "bg-slate-950" : "bg-white"
           )}
         >
           {bottomContent}
