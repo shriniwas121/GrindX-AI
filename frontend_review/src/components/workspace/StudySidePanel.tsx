@@ -38,6 +38,8 @@ type StudySidePanelProps = {
   onQuizSubmit: () => void;
   isExpanded: boolean;
   onToggleExpanded: () => void;
+  isCollapsed?: boolean;
+  onToggleCollapsed?: () => void;
 };
 
 const studyTabs: { id: Exclude<TabId, "chat">; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
@@ -76,6 +78,8 @@ export function StudySidePanel({
   onQuizSubmit,
   isExpanded,
   onToggleExpanded,
+  isCollapsed = false,
+  onToggleCollapsed,
 }: StudySidePanelProps) {
   const isStudyTab = activeTab !== "chat" && Boolean(activeId);
   const content = translatedTabContent || tabContent;
@@ -99,18 +103,33 @@ export function StudySidePanel({
             </p>
           </div>
           {canExpand && (
-            <button
-              onClick={onToggleExpanded}
-              className={cn(
-                "inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors",
-                theme === "dark"
-                  ? "border-slate-700 bg-slate-800 text-slate-200 hover:bg-slate-700"
-                  : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+            <div className="flex items-center gap-2">
+              {onToggleCollapsed && (
+                <button
+                  onClick={onToggleCollapsed}
+                  className={cn(
+                    "inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors",
+                    theme === "dark"
+                      ? "border-slate-700 bg-slate-800 text-slate-200 hover:bg-slate-700"
+                      : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                  )}
+                >
+                  {isCollapsed ? "Expand panel" : "Collapse panel"}
+                </button>
               )}
-            >
-              {isExpanded ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
-              {isExpanded ? "Normal size" : "Expand study workspace"}
-            </button>
+              <button
+                onClick={onToggleExpanded}
+                className={cn(
+                  "inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors",
+                  theme === "dark"
+                    ? "border-slate-700 bg-slate-800 text-slate-200 hover:bg-slate-700"
+                    : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                )}
+              >
+                {isExpanded ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+                {isExpanded ? "Back to workspace" : "Expand study workspace"}
+              </button>
+            </div>
           )}
         </div>
       </div>

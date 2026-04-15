@@ -10,6 +10,7 @@ type WorkspaceShellProps = {
   theme: "light" | "dark";
   showSidebar: boolean;
   isSidebarCollapsed: boolean;
+  isStudyCollapsed: boolean;
   isStudyExpanded: boolean;
   onSidebarOverlayClick: () => void;
   sidebar: ReactNode;
@@ -22,6 +23,7 @@ export function WorkspaceShell({
   theme,
   showSidebar,
   isSidebarCollapsed,
+  isStudyCollapsed,
   isStudyExpanded,
   onSidebarOverlayClick,
   sidebar,
@@ -29,6 +31,21 @@ export function WorkspaceShell({
   showRightPanel = false,
   children,
 }: WorkspaceShellProps) {
+  if (showRightPanel && rightPanel && isStudyExpanded) {
+    return (
+      <div className="h-[calc(100vh-4rem)] min-h-0 p-2">
+        <div
+          className={cn(
+            "h-full min-h-0 overflow-hidden rounded-[28px] border shadow-sm",
+            theme === "dark" ? "border-slate-800 bg-slate-950" : "border-slate-200 bg-white"
+          )}
+        >
+          {rightPanel}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="h-[calc(100vh-4rem)] min-h-0">
       {showSidebar && (
@@ -43,7 +60,11 @@ export function WorkspaceShell({
           "h-full lg:grid",
           showRightPanel && rightPanel
             ? isSidebarCollapsed
-              ? "lg:grid-cols-[72px_minmax(0,1fr)_30%]"
+              ? isStudyCollapsed
+                ? "lg:grid-cols-[72px_minmax(0,1fr)_72px]"
+                : "lg:grid-cols-[72px_minmax(0,1fr)_30%]"
+              : isStudyCollapsed
+              ? "lg:grid-cols-[20%_minmax(0,1fr)_72px]"
               : "lg:grid-cols-[20%_50%_30%]"
             : isSidebarCollapsed
             ? "lg:grid-cols-[72px_minmax(0,1fr)]"
