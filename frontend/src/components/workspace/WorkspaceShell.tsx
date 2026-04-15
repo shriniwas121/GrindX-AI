@@ -52,14 +52,23 @@ export function WorkspaceShell({
       >
         <aside
           className={cn(
-            "fixed top-16 left-0 z-50 h-[calc(100vh-4rem)] w-[88vw] max-w-72 transform transition-all duration-300 ease-in-out sm:w-72 lg:static lg:z-10 lg:h-full lg:w-auto lg:max-w-none lg:translate-x-0 lg:border-r",
+            "fixed top-16 left-0 z-50 h-[calc(100vh-4rem)] w-[88vw] max-w-72 transform transition-all duration-300 ease-in-out sm:w-72 lg:static lg:z-10 lg:h-full lg:w-auto lg:max-w-none lg:translate-x-0 lg:p-2",
             theme === "dark"
-              ? "bg-slate-950 lg:border-slate-800"
-              : "bg-white lg:border-gray-200",
+              ? "bg-slate-950"
+              : "bg-white",
             showSidebar ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
           )}
         >
-          {sidebar}
+          <div
+            className={cn(
+              "h-full min-h-0 overflow-hidden lg:rounded-[28px] lg:border lg:shadow-sm",
+              theme === "dark"
+                ? "lg:border-slate-800 lg:bg-slate-950"
+                : "lg:border-slate-200 lg:bg-white"
+            )}
+          >
+            {sidebar}
+          </div>
         </aside>
 
         <section className="min-h-0 min-w-0 overflow-hidden">{children}</section>
@@ -67,11 +76,20 @@ export function WorkspaceShell({
         {showRightPanel && rightPanel && (
           <aside
             className={cn(
-              "hidden min-h-0 min-w-0 overflow-hidden border-l lg:block",
-              theme === "dark" ? "border-slate-800 bg-slate-950" : "border-slate-200 bg-slate-50/60"
+              "hidden min-h-0 min-w-0 overflow-hidden lg:block lg:p-2",
+              theme === "dark" ? "bg-slate-950" : "bg-slate-50/60"
             )}
           >
-            {rightPanel}
+            <div
+              className={cn(
+                "h-full min-h-0 overflow-hidden rounded-[28px] border shadow-sm",
+                theme === "dark"
+                  ? "border-slate-800 bg-slate-950"
+                  : "border-slate-200 bg-white"
+              )}
+            >
+              {rightPanel}
+            </div>
           </aside>
         )}
       </div>

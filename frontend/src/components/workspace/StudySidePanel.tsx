@@ -82,7 +82,7 @@ export function StudySidePanel({
   const canExpand = activeTab !== "chat" && Boolean(activeId);
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div className={cn("flex h-full min-h-0 flex-col", theme === "dark" ? "bg-slate-900" : "bg-white")}>
       <div
         className={cn(
           "border-b px-4 py-4",

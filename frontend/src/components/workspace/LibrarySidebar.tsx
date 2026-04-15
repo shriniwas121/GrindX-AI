@@ -113,7 +113,7 @@ export function LibrarySidebar({
   }
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col rounded-[28px] border shadow-sm overflow-hidden">
       <div className="p-4 space-y-2">
         <button
           onClick={onToggleCollapsed}
