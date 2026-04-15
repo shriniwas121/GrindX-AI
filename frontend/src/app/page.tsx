@@ -2797,10 +2797,10 @@ export default function Home() {
       {/* Header */}
       <header
         className={cn(
-          "sticky top-0 z-40 backdrop-blur-xl border-b shadow-sm transition-colors duration-300",
+          "sticky top-0 z-40 backdrop-blur-xl transition-colors duration-300",
           theme === "dark"
-            ? "bg-slate-950/85 border-slate-800"
-            : "bg-white/80 border-gray-200/50"
+            ? "bg-slate-950/85"
+            : "bg-white/80"
         )}
       >
         <div className="max-w-7xl mx-auto px-3 sm:px-5 lg:px-8">
