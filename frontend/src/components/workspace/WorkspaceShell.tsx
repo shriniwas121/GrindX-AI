@@ -42,12 +42,8 @@ export function WorkspaceShell({
         className={cn(
           "h-full lg:grid",
           showRightPanel && rightPanel
-            ? isStudyExpanded
-              ? isSidebarCollapsed
-                ? "lg:grid-cols-[72px_35%_65%]"
-                : "lg:grid-cols-[16%_34%_50%]"
-              : isSidebarCollapsed
-              ? "lg:grid-cols-[72px_58%_42%]"
+            ? isSidebarCollapsed
+              ? "lg:grid-cols-[72px_minmax(0,1fr)_30%]"
               : "lg:grid-cols-[20%_50%_30%]"
             : isSidebarCollapsed
             ? "lg:grid-cols-[72px_minmax(0,1fr)]"
