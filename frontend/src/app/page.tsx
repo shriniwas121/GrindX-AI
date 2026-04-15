@@ -113,7 +113,6 @@ export default function Home() {
   const [urlInput, setUrlInput] = useState("");
   const [showSidebar, setShowSidebar] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [isStudyCollapsed, setIsStudyCollapsed] = useState(false);
   const [isStudyExpanded, setIsStudyExpanded] = useState(false);
   const [showScreenshotPasteBox, setShowScreenshotPasteBox] = useState(false);
   const API = process.env.NEXT_PUBLIC_API_URL;
@@ -2410,8 +2409,6 @@ export default function Home() {
       onQuizSubmit={handleQuizSubmit}
       isExpanded={isStudyExpanded}
       onToggleExpanded={() => setIsStudyExpanded((prev) => !prev)}
-      isCollapsed={isStudyCollapsed}
-      onToggleCollapsed={() => setIsStudyCollapsed((prev) => !prev)}
     />
   );
 
@@ -2896,7 +2893,6 @@ export default function Home() {
         theme={theme}
         showSidebar={showSidebar}
         isSidebarCollapsed={isSidebarCollapsed}
-        isStudyCollapsed={isStudyCollapsed}
         isStudyExpanded={isStudyExpanded}
         onSidebarOverlayClick={() => setShowSidebar(false)}
         showRightPanel={true}
