@@ -59,9 +59,10 @@ export function WorkspaceShell({
           onClick={onSidebarOverlayClick}
         />
       )}
+
       <div
         className={cn(
-          "pointer-events-none absolute inset-x-0 top-0 z-20 h-px",
+          "pointer-events-none absolute inset-x-0 top-0 z-10 h-px",
           theme === "dark" ? "bg-slate-950" : "bg-slate-50"
         )}
       />
