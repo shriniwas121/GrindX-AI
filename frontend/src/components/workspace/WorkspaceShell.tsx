@@ -9,6 +9,8 @@ function cn(...classes: (string | boolean | undefined | null)[]) {
 type WorkspaceShellProps = {
   theme: "light" | "dark";
   showSidebar: boolean;
+  isSidebarCollapsed: boolean;
+  isStudyExpanded: boolean;
   onSidebarOverlayClick: () => void;
   sidebar: ReactNode;
   rightPanel?: ReactNode;
@@ -19,6 +21,8 @@ type WorkspaceShellProps = {
 export function WorkspaceShell({
   theme,
   showSidebar,
+  isSidebarCollapsed,
+  isStudyExpanded,
   onSidebarOverlayClick,
   sidebar,
   rightPanel,
@@ -38,7 +42,15 @@ export function WorkspaceShell({
         className={cn(
           "h-full lg:grid",
           showRightPanel && rightPanel
-            ? "lg:grid-cols-[20%_50%_30%]"
+            ? isStudyExpanded
+              ? isSidebarCollapsed
+                ? "lg:grid-cols-[72px_35%_65%]"
+                : "lg:grid-cols-[16%_34%_50%]"
+              : isSidebarCollapsed
+              ? "lg:grid-cols-[72px_58%_42%]"
+              : "lg:grid-cols-[20%_50%_30%]"
+            : isSidebarCollapsed
+            ? "lg:grid-cols-[72px_minmax(0,1fr)]"
             : "lg:grid-cols-[20%_80%]"
         )}
       >
