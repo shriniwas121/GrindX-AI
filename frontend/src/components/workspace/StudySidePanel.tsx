@@ -1,6 +1,6 @@
 "use client";
 
-import { BookOpen, Brain, Target, Award, MessageSquare, Maximize2, Minimize2, Send, Loader2, Mic, X } from "lucide-react";
+import { Award, BookOpen, Brain, CheckCircle2, Loader2, Maximize2, MessageSquare, Minimize2, Target, X, XCircle } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 
 function cn(...classes: (string | boolean | undefined | null)[]) {
@@ -36,14 +36,6 @@ type StudySidePanelProps = {
   currentQ: number;
   onCurrentQChange: (next: number) => void;
   onQuizSubmit: () => void;
-  question: string;
-  onQuestionChange: (value: string) => void;
-  onAsk: () => void;
-  isAsking: boolean;
-  isStreaming: boolean;
-  onStopAnswer: () => void;
-  onVoiceInput: () => void;
-  isListening: boolean;
   isExpanded: boolean;
   onToggleExpanded: () => void;
 };
@@ -82,20 +74,11 @@ export function StudySidePanel({
   currentQ,
   onCurrentQChange,
   onQuizSubmit,
-  question,
-  onQuestionChange,
-  onAsk,
-  isAsking,
-  isStreaming,
-  onStopAnswer,
-  onVoiceInput,
-  isListening,
   isExpanded,
   onToggleExpanded,
 }: StudySidePanelProps) {
   const isStudyTab = activeTab !== "chat" && Boolean(activeId);
   const content = translatedTabContent || tabContent;
-  const showPracticeInput = activeTab === "practice" && isExpanded && Boolean(activeId);
   const canExpand = activeTab !== "chat" && Boolean(activeId);
 
   return (
@@ -126,7 +109,7 @@ export function StudySidePanel({
               )}
             >
               {isExpanded ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
-              {isExpanded ? "Normal" : "Expand"}
+              {isExpanded ? "Normal size" : "Expand study workspace"}
             </button>
           )}
         </div>
@@ -241,6 +224,63 @@ export function StudySidePanel({
                   <p className="font-semibold">Score: {quizScore} / {quizData.length}</p>
                   <p className="mt-1 text-xs">{Math.round((quizScore / quizData.length) * 100)}% correct</p>
                 </div>
+
+                <div className="space-y-3">
+                  {quizData.map((q, idx) => {
+                    const correctIndex = typeof q.correctAnswer === "number" ? q.correctAnswer : -1;
+                    const selectedIndex = Number.parseInt(quizAnswers[idx] ?? "-1", 10);
+                    const isCorrect = selectedIndex === correctIndex;
+                    const options = q.options ?? [];
+
+                    return (
+                      <div
+                        key={idx}
+                        className={cn(
+                          "rounded-2xl border p-3",
+                          isCorrect
+                            ? theme === "dark"
+                              ? "border-green-800 bg-green-950/30"
+                              : "border-green-200 bg-green-50"
+                            : theme === "dark"
+                            ? "border-red-800 bg-red-950/30"
+                            : "border-red-200 bg-red-50"
+                        )}
+                      >
+                        <div className="flex items-start gap-2.5">
+                          {isCorrect ? (
+                            <CheckCircle2 className="mt-0.5 h-4.5 w-4.5 text-green-500" />
+                          ) : (
+                            <XCircle className="mt-0.5 h-4.5 w-4.5 text-red-500" />
+                          )}
+                          <div className="min-w-0 flex-1">
+                            <p className={cn("text-sm font-semibold", theme === "dark" ? "text-slate-100" : "text-slate-900")}>
+                              {idx + 1}. {q.question || "Untitled question"}
+                            </p>
+
+                            <p className={cn("mt-1 text-xs", theme === "dark" ? "text-slate-300" : "text-slate-700")}>
+                              <span className="font-semibold">Correct answer:</span>{" "}
+                              {correctIndex >= 0 && options[correctIndex] ? options[correctIndex] : "Not available"}
+                            </p>
+
+                            {!isCorrect && (
+                              <p className={cn("mt-1 text-xs", theme === "dark" ? "text-red-300" : "text-red-600")}>
+                                <span className="font-semibold">Your answer:</span>{" "}
+                                {selectedIndex >= 0 && options[selectedIndex] ? options[selectedIndex] : "Not answered"}
+                              </p>
+                            )}
+
+                            {q.explanation && (
+                              <p className={cn("mt-2 text-xs italic leading-5", theme === "dark" ? "text-slate-400" : "text-slate-600")}>
+                                {q.explanation}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
                 <button
                   onClick={() => {
                     onQuizScoreChange(null);
@@ -407,68 +447,6 @@ export function StudySidePanel({
                 </p>
               )}
             </div>
-
-            {showPracticeInput && (
-              <div
-                className={cn(
-                  "border-t px-3 py-3",
-                  theme === "dark" ? "border-slate-800 bg-slate-900" : "border-slate-200 bg-white"
-                )}
-              >
-                <div className="flex items-end gap-2">
-                  <div className="relative flex-1">
-                    <textarea
-                      value={question}
-                      onChange={(e) => onQuestionChange(e.target.value)}
-                      onInput={(e) => {
-                        const el = e.currentTarget;
-                        el.style.height = "auto";
-                        el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" && !e.shiftKey) {
-                          e.preventDefault();
-                          onAsk();
-                        }
-                      }}
-                      placeholder="Ask about these practice questions..."
-                      className={cn(
-                        "min-h-[52px] max-h-40 w-full resize-none overflow-y-auto rounded-xl border-2 px-4 py-3 pr-12 outline-none transition-all focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10",
-                        theme === "dark"
-                          ? "border-slate-700 bg-slate-950 !text-white caret-white placeholder:!text-slate-400"
-                          : "border-gray-200 bg-white !text-slate-900 caret-slate-900 placeholder:!text-slate-400"
-                      )}
-                      rows={1}
-                    />
-                    <button
-                      onClick={onVoiceInput}
-                      className={cn(
-                        "absolute bottom-3 right-3 rounded-lg p-1.5 transition-colors",
-                        isListening ? "bg-red-100 text-red-600" : "text-gray-400 hover:bg-gray-100 hover:text-gray-600"
-                      )}
-                    >
-                      <Mic className="h-5 w-5" />
-                    </button>
-                  </div>
-                  {isStreaming ? (
-                    <button
-                      onClick={onStopAnswer}
-                      className="rounded-xl bg-red-500 p-3 text-white shadow-lg transition-all hover:bg-red-600"
-                    >
-                      <X className="h-5 w-5" />
-                    </button>
-                  ) : (
-                    <button
-                      onClick={onAsk}
-                      disabled={!question.trim() || isAsking}
-                      className="rounded-xl bg-gradient-to-r from-blue-600 to-teal-600 p-3 text-white shadow-lg shadow-blue-500/25 transition-all hover:from-blue-700 hover:to-teal-700 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      <Send className="h-5 w-5" />
-                    </button>
-                  )}
-                </div>
-              </div>
-            )}
           </div>
         )}
       </div>
