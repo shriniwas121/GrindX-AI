@@ -47,7 +47,12 @@ export function WorkspaceShell({
   }
 
   return (
-    <div className="h-[calc(100vh-4rem)] min-h-0">
+    <div
+      className={cn(
+        "h-[calc(100vh-4rem)] min-h-0",
+        theme === "dark" ? "bg-slate-950" : "bg-slate-50"
+      )}
+    >
       {showSidebar && (
         <div
           className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm lg:hidden"
@@ -75,8 +80,8 @@ export function WorkspaceShell({
           className={cn(
             "fixed top-16 left-0 z-50 h-[calc(100vh-4rem)] w-[88vw] max-w-72 transform transition-all duration-300 ease-in-out sm:w-72 lg:static lg:z-10 lg:h-full lg:w-auto lg:max-w-none lg:translate-x-0 lg:p-2",
             theme === "dark"
-              ? "bg-slate-950"
-              : "bg-white",
+              ? "bg-slate-950 lg:bg-transparent"
+              : "bg-white lg:bg-transparent",
             showSidebar ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
           )}
         >
@@ -96,10 +101,7 @@ export function WorkspaceShell({
 
         {showRightPanel && rightPanel && (
           <aside
-            className={cn(
-              "hidden min-h-0 min-w-0 overflow-hidden lg:block lg:p-2",
-              theme === "dark" ? "bg-slate-950" : "bg-slate-50/60"
-            )}
+            className="hidden min-h-0 min-w-0 overflow-hidden lg:block lg:p-2"
           >
             <div
               className={cn(
