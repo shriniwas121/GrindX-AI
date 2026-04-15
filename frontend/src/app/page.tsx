@@ -1275,7 +1275,7 @@ export default function Home() {
   };
 
 
-  const handleAsk = async () => {
+  const handleAsk = async (source: "chat" | "practice" = "chat") => {
     try {
       console.log("ASK MODE:", activeId ? "DOCUMENT" : "GENERAL");
   
@@ -1325,7 +1325,7 @@ export default function Home() {
         return;
       }
 
-      if (activeTab !== "chat" && activeTab !== "practice") {
+      if (source === "practice" && activeTab !== "practice") {
         alert("Questions are only supported in Chat and Practice tabs.");
         setIsAsking(false);
         return;
@@ -1354,7 +1354,7 @@ export default function Home() {
         ]);
       }
   
-      const docText = activeTab === "practice"
+      const docText = source === "practice"
         ? tabContent || activeItem?.documentText || ""
         : activeItem?.documentText || "";
   
@@ -1815,7 +1815,22 @@ export default function Home() {
 
 
 
-  const handleLanguageChange = (language: string) => {
+  const handleLanguageChange = (language: string, scope: "auto" | "chat" | "tab" = "auto") => {
+    if (scope === "chat") {
+      setChatLanguage(language);
+      return;
+    }
+
+    if (scope === "tab") {
+      if (scope === "tab" ? activeTab === "mock" : activeTab === "mock") {
+        setTabLanguage("english");
+        setTranslatedTabContent("");
+        return;
+      }
+      setTabLanguage(language);
+      return;
+    }
+
     if (activeTab === "chat") {
       setChatLanguage(language);
       return;
@@ -1833,9 +1848,9 @@ export default function Home() {
 
 
 
-  const handleTranslate = async () => {
+  const handleTranslate = async (scope: "auto" | "chat" | "tab" = "auto") => {
     try {
-      if (activeTab === "chat") {
+      if (scope === "chat" || (scope === "auto" && activeTab === "chat")) {
         const activeItem = library.find((item) => item.id === activeId);
         if (!activeItem) return;
   
@@ -1912,7 +1927,7 @@ export default function Home() {
       }
   
 
-      if (activeTab === "mock") {
+      if (scope === "tab" && activeTab === "mock") {
         setTranslatedTabContent("");
         setTabLanguage("english");
         return;
@@ -2371,8 +2386,8 @@ export default function Home() {
       activeId={activeId}
       audioLimitMessage={audioLimitMessage}
       chatLanguage={chatLanguage}
-      onLanguageChange={handleLanguageChange}
-      onTranslate={handleTranslate}
+      onLanguageChange={(language) => handleLanguageChange(language, "tab")}
+      onTranslate={() => handleTranslate("tab")}
       onSpeakTab={handleSpeakTab}
       isAudioLoading={isAudioLoading}
       isTabSpeaking={isTabSpeaking}
@@ -2396,7 +2411,7 @@ export default function Home() {
       onQuizSubmit={handleQuizSubmit}
       question={question}
       onQuestionChange={setQuestion}
-      onAsk={handleAsk}
+      onAsk={() => handleAsk("practice")}
       isAsking={isAsking}
       isStreaming={isStreaming}
       onStopAnswer={handleStopAnswer}
@@ -3368,7 +3383,7 @@ export default function Home() {
                       <div className="flex items-center gap-2">
                         <select
                           value={chatLanguage}
-                          onChange={(e) => handleLanguageChange(e.target.value)}
+                          onChange={(e) => handleLanguageChange(e.target.value, "chat")}
                           className="px-3 py-2 border-2 border-gray-200 rounded-xl text-sm focus:border-blue-500 outline-none"
                         >
                           <option value="english">English</option>
@@ -3382,7 +3397,7 @@ export default function Home() {
                         </select>
                     
                         <button
-                          onClick={handleTranslate}
+                          onClick={() => handleTranslate("chat")}
                           className="px-3 py-2 border-2 border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all"
                         >
                           Translate
@@ -3519,7 +3534,7 @@ export default function Home() {
                             onKeyDown={(e) => {
                               if (e.key === "Enter" && !e.shiftKey) {
                                 e.preventDefault();
-                                handleAsk();
+                                handleAsk("chat");
                               }
                             }}
                             placeholder="Ask anything about your document..."
@@ -3554,7 +3569,7 @@ export default function Home() {
                           </button>
                         ) : (
                           <button
-                            onClick={handleAsk}
+                            onClick={() => handleAsk("chat")}
                             disabled={!question.trim() || isAsking}
                             className="p-3 bg-gradient-to-r from-blue-600 to-teal-600 text-white rounded-xl hover:from-blue-700 hover:to-teal-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-500/25 transition-all"
                           >
@@ -3607,7 +3622,7 @@ export default function Home() {
                           <div className="flex items-center gap-2">
                             <select
                               value={chatLanguage}
-                              onChange={(e) => handleLanguageChange(e.target.value)}
+                              onChange={(e) => handleLanguageChange(e.target.value, "tab")}
                               className="px-3 py-2 border-2 border-gray-200 rounded-xl text-sm focus:border-blue-500 outline-none"
 
                             >
@@ -3622,7 +3637,7 @@ export default function Home() {
                             </select>
 
                             <button
-                              onClick={handleTranslate}
+                              onClick={() => handleTranslate("tab")}
                               className="px-3 py-2 border-2 border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all"
                             >
                               Translate
@@ -3727,7 +3742,7 @@ export default function Home() {
                           <div className="flex items-center gap-2">
                             <select
                               value={chatLanguage}
-                              onChange={(e) => handleLanguageChange(e.target.value)}
+                              onChange={(e) => handleLanguageChange(e.target.value, "tab")}
                               className="px-3 py-2 border-2 border-gray-200 rounded-xl text-sm focus:border-blue-500 outline-none"
 
                             >
@@ -3742,7 +3757,7 @@ export default function Home() {
                             </select>
                         
                             <button
-                              onClick={handleTranslate}
+                              onClick={() => handleTranslate("tab")}
                               className="px-3 py-2 border-2 border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all"
                             >
                               Translate
@@ -3843,7 +3858,7 @@ export default function Home() {
                           <div className="flex items-center gap-2">
                             <select
                               value={chatLanguage}
-                              onChange={(e) => handleLanguageChange(e.target.value)}
+                              onChange={(e) => handleLanguageChange(e.target.value, "tab")}
                               className="px-3 py-2 border-2 border-gray-200 rounded-xl text-sm focus:border-blue-500 outline-none"
 
                             >
@@ -3859,7 +3874,7 @@ export default function Home() {
                             </select>
 
                             <button
-                              onClick={handleTranslate}
+                              onClick={() => handleTranslate("tab")}
                               className="px-3 py-2 border-2 border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all"
                             >
                               Translate
@@ -3940,7 +3955,7 @@ export default function Home() {
                             onKeyDown={(e) => {
                               if (e.key === "Enter" && !e.shiftKey) {
                                 e.preventDefault();
-                                handleAsk();
+                                handleAsk("practice");
                               }
                             }}
                             placeholder="Ask about these practice questions..."
@@ -3975,7 +3990,7 @@ export default function Home() {
                           </button>
                         ) : (
                           <button
-                            onClick={handleAsk}
+                            onClick={() => handleAsk("practice")}
                             disabled={!question.trim() || isAsking}
                             className="p-3 bg-gradient-to-r from-blue-600 to-teal-600 text-white rounded-xl hover:from-blue-700 hover:to-teal-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-500/25 transition-all"
                           >
