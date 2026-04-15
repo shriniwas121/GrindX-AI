@@ -3078,50 +3078,109 @@ export default function Home() {
             <div className="h-full flex flex-col p-2 sm:p-3 lg:p-4">
               <div
                 className={cn(
-                  "flex-1 min-h-0 rounded-[28px] border shadow-sm overflow-hidden transition-colors duration-300",
+                  "flex-1 min-h-0 overflow-y-auto rounded-[28px] border px-4 py-6 sm:px-6 sm:py-8 transition-colors duration-300",
                   theme === "dark"
                     ? "bg-slate-900 border-slate-800"
                     : "bg-white border-slate-200"
                 )}
               >
-                <div
-                  className={cn(
-                    "border-b px-4 py-3 sm:px-5",
-                    theme === "dark" ? "border-slate-800 bg-slate-900" : "border-slate-100 bg-white"
-                  )}
-                >
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={handleUploadButtonClick}
-                        className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-teal-600 px-3 py-2 text-sm font-medium text-white"
-                      >
-                        <Upload className="h-4 w-4" />
-                        Upload
-                      </button>
-
-                      <label
-                        className={cn(
-                          "inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium transition-colors cursor-pointer",
-                          theme === "dark"
-                            ? "border-slate-700 bg-slate-800 text-slate-200 hover:bg-slate-700"
-                            : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
-                        )}
-                      >
-                        <Camera className="h-4 w-4" />
-                        Camera
-                        <input
-                          type="file"
-                          accept="image/*"
-                          capture="environment"
-                          onChange={handleCameraUpload}
-                          className="hidden"
-                        />
-                      </label>
+                <div className="mx-auto w-full max-w-4xl">
+                  <div className="mb-4 inline-flex rounded-2xl bg-gradient-to-br from-slate-800 to-slate-900 p-3 shadow-lg">
+                    <div className="rounded-xl bg-gradient-to-br from-blue-600 to-teal-500 p-2.5">
+                      <Sparkles className="h-7 w-7 text-white" />
                     </div>
+                  </div>
 
-                    <div className="relative sm:ml-auto sm:min-w-[280px] sm:flex-1 sm:max-w-[440px]">
-                      <Link2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <h1
+                    className={cn(
+                      "text-4xl font-bold leading-tight",
+                      theme === "dark" ? "text-slate-100" : "text-slate-900"
+                    )}
+                  >
+                    Welcome to{" "}
+                    <span className="bg-gradient-to-r from-blue-600 to-teal-500 bg-clip-text text-transparent">Grindx AI</span>
+                  </h1>
+
+                  <p
+                    className={cn(
+                      "mt-6 text-4xl font-bold leading-tight",
+                      theme === "dark" ? "text-slate-100" : "text-slate-900"
+                    )}
+                  >
+                    Stop studying hard. Start studying smart.
+                  </p>
+
+                  <p
+                    className={cn(
+                      "mt-2 max-w-3xl text-2xl leading-relaxed",
+                      theme === "dark" ? "text-slate-300" : "text-slate-600"
+                    )}
+                  >
+                    Upload notes, screenshots, or snap a photo — then chat with them naturally. Get summaries, practice questions, and full mock exams.
+                  </p>
+
+                  <div
+                    className={cn(
+                      "mt-8 rounded-3xl border-2 border-dashed p-4",
+                      theme === "dark"
+                        ? "border-slate-700 bg-slate-900/70"
+                        : "border-slate-300 bg-slate-50"
+                    )}
+                  >
+                    <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={cn(
+                            "rounded-xl p-3",
+                            theme === "dark" ? "bg-slate-800" : "bg-slate-200"
+                          )}
+                        >
+                          <Upload className="h-6 w-6 text-blue-500" />
+                        </div>
+                        <div>
+                          <h3 className={cn("text-2xl font-semibold", theme === "dark" ? "text-slate-100" : "text-slate-900")}>
+                            Upload your study material
+                          </h3>
+                          <p className={cn("text-xl", theme === "dark" ? "text-slate-400" : "text-slate-600")}>
+                            PDF, Word, Text, Images, or URL
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={handleUploadButtonClick}
+                          className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-teal-600 px-5 py-3 text-xl font-semibold text-white shadow-md"
+                        >
+                          <Upload className="h-5 w-5" />
+                          Upload
+                        </button>
+
+                        <label
+                          className={cn(
+                            "inline-flex cursor-pointer items-center gap-2 rounded-2xl border px-5 py-3 text-xl font-medium transition-colors",
+                            theme === "dark"
+                              ? "border-slate-600 bg-slate-900 text-slate-100 hover:bg-slate-800"
+                              : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                          )}
+                        >
+                          <Camera className="h-5 w-5" />
+                          Camera
+                          <input
+                            type="file"
+                            accept="image/*"
+                            capture="environment"
+                            onChange={handleCameraUpload}
+                            className="hidden"
+                          />
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+                    <div className="relative flex-1">
+                      <Link2 className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
                       <input
                         ref={urlInputRef}
                         type="text"
@@ -3133,79 +3192,45 @@ export default function Home() {
                             handleUrlAnalyze(e.currentTarget.value);
                           }
                         }}
-                        placeholder="Paste YouTube or website URL"
+                        placeholder="Paste YouTube, website URL or Screenshot."
                         className={cn(
-                          "w-full rounded-xl border pl-10 pr-20 py-2.5 text-sm outline-none transition-colors",
+                          "w-full rounded-3xl border-2 pl-12 pr-4 py-4 text-xl outline-none transition-colors",
                           theme === "dark"
-                            ? "border-slate-700 bg-slate-800 text-slate-100 placeholder:text-slate-400"
+                            ? "border-slate-700 bg-slate-900 text-slate-100 placeholder:text-slate-500"
                             : "border-slate-200 bg-white text-slate-900 placeholder:text-slate-400"
                         )}
                       />
-                      <button
-                        type="button"
-                        onClick={() => handleUrlAnalyze(urlInput)}
-                        disabled={!urlInput.trim()}
-                        className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-lg bg-teal-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
-                      >
-                        Analyze
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                <div
-                  className={cn(
-                    "flex flex-1 min-h-0 flex-col justify-center px-6 text-center",
-                    theme === "dark" ? "bg-slate-900" : "bg-white"
-                  )}
-                >
-                  <div className="mx-auto max-w-xl">
-                    <div className="mb-4 inline-flex rounded-2xl bg-gradient-to-br from-blue-600/20 to-teal-500/20 p-3">
-                      <MessageSquare className="h-7 w-7 text-blue-500" />
-                    </div>
-                    <h2 className={cn("text-xl font-semibold", theme === "dark" ? "text-slate-100" : "text-slate-900")}>
-                      Your chat workspace is ready
-                    </h2>
-                    <p className={cn("mt-2 text-sm", theme === "dark" ? "text-slate-400" : "text-slate-600")}>
-                      Upload a document, screenshot, or URL to start a grounded conversation in the center panel.
-                    </p>
-                  </div>
-                </div>
-
-                <div
-                  className={cn(
-                    "border-t px-4 py-3 sm:px-5",
-                    theme === "dark" ? "border-slate-800 bg-slate-900" : "border-slate-200 bg-white"
-                  )}
-                >
-                  <div className="flex items-end gap-2">
-                    <div className="relative flex-1">
-                      <textarea
-                        value={question}
-                        onChange={(e) => setQuestion(e.target.value)}
-                        placeholder="Upload a document to start chatting..."
-                        disabled
-                        className={cn(
-                          "w-full min-h-[62px] max-h-44 resize-none overflow-y-auto rounded-3xl px-5 py-4 pr-14 text-[15px] outline-none transition-all",
-                          theme === "dark"
-                            ? "bg-slate-800/90 text-slate-300 placeholder:text-slate-500"
-                            : "bg-slate-100 text-slate-600 placeholder:text-slate-500"
-                        )}
-                        rows={1}
-                      />
-                      <button
-                        disabled
-                        className="absolute right-3 bottom-3 rounded-full bg-slate-400/40 p-2 text-slate-300"
-                      >
-                        <Mic className="h-5 w-5" />
-                      </button>
                     </div>
                     <button
-                      disabled
-                      className="h-12 w-12 rounded-full bg-gradient-to-r from-blue-600 to-teal-600 text-white opacity-50"
+                      type="button"
+                      onClick={() => handleUrlAnalyze(urlInput)}
+                      disabled={!urlInput.trim()}
+                      className="rounded-2xl bg-teal-600 px-5 py-3 text-xl font-medium text-white transition-colors hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      <Send className="h-5 w-5" />
+                      Analyze
                     </button>
+                  </div>
+
+                  <div className="mt-6 flex flex-wrap items-center gap-6">
+                    {[
+                      { icon: Zap, label: "AI-Powered" },
+                      { icon: TrendingUp, label: "Learn Faster" },
+                      { icon: Award, label: "Ace Exams" },
+                    ].map((stat, idx) => (
+                      <div key={idx} className="flex items-center gap-2">
+                        <div
+                          className={cn(
+                            "rounded-lg p-2",
+                            theme === "dark" ? "bg-slate-800" : "bg-slate-100"
+                          )}
+                        >
+                          <stat.icon className={cn("h-4 w-4", theme === "dark" ? "text-slate-300" : "text-slate-700")} />
+                        </div>
+                        <span className={cn("text-lg font-medium", theme === "dark" ? "text-slate-200" : "text-slate-700")}>
+                          {stat.label}
+                        </span>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
