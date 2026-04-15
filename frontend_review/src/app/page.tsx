@@ -781,13 +781,11 @@ export default function Home() {
   }, [translatedTabContent, tabContent]);
 
   useEffect(() => {
-    if (activeTab !== "chat") return;
-
     const el = chatEndRef.current;
     if (!el) return;
 
     el.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [streamingText, library, generalChat, activeId, activeTab]);
+  }, [streamingText, library, generalChat, activeId, isAsking]);
 
   const preventNewSourceWhileInDoc = () => {
     if (!activeId) return false;
@@ -2409,14 +2407,6 @@ export default function Home() {
       currentQ={currentQ}
       onCurrentQChange={setCurrentQ}
       onQuizSubmit={handleQuizSubmit}
-      question={question}
-      onQuestionChange={setQuestion}
-      onAsk={() => handleAsk("practice")}
-      isAsking={isAsking}
-      isStreaming={isStreaming}
-      onStopAnswer={handleStopAnswer}
-      onVoiceInput={handleVoiceInput}
-      isListening={isListening}
       isExpanded={isStudyExpanded}
       onToggleExpanded={() => setIsStudyExpanded((prev) => !prev)}
     />
@@ -2928,7 +2918,7 @@ export default function Home() {
               user && (
                 <div
                   className={cn(
-                    "rounded-xl border px-2.5 py-2 shadow-sm transition-colors duration-300",
+                    "rounded-lg border px-2 py-1.5 shadow-sm transition-colors duration-300",
                     theme === "dark"
                       ? "border-slate-700 bg-slate-900"
                       : "border-slate-200 bg-white/80"
@@ -2939,13 +2929,13 @@ export default function Home() {
                       type="button"
                       onClick={() => setShowBillingActions((prev) => !prev)}
                       className={cn(
-                        "flex w-full items-start gap-3 rounded-xl text-left transition p-1",
+                        "flex w-full items-start gap-2 rounded-lg text-left transition p-0.5",
                         theme === "dark" ? "hover:bg-slate-800" : "hover:bg-slate-50"
                       )}
                     >
                       <div
                         className={cn(
-                          "flex h-8 w-8 items-center justify-center rounded-full text-white text-xs font-semibold uppercase shrink-0",
+                          "flex h-7 w-7 items-center justify-center rounded-full text-white text-[10px] font-semibold uppercase shrink-0",
                           theme === "dark" ? "bg-slate-600" : "bg-slate-400"
                         )}
                       >
@@ -2955,7 +2945,7 @@ export default function Home() {
                       <div className="min-w-0 flex-1">
                         <div
                           className={cn(
-                            "truncate text-xs font-semibold",
+                            "truncate text-[11px] font-semibold leading-4",
                             theme === "dark" ? "text-slate-100" : "text-slate-900"
                           )}
                         >
@@ -2964,7 +2954,7 @@ export default function Home() {
               
                         <div
                           className={cn(
-                            "mt-0.5 text-[11px] font-medium",
+                            "mt-0.5 text-[10px] font-medium leading-4",
                             theme === "dark" ? "text-slate-300" : "text-slate-600"
                           )}
                         >
@@ -2985,7 +2975,7 @@ export default function Home() {
                         </div>
               
                         {profile?.subscription_status === "trialing" && profile?.trial_ends_at && (
-                          <div className="mt-1 text-xs text-amber-600">
+                          <div className="mt-0.5 text-[10px] text-amber-600">
                             Trial ends on {formatPlanDate(profile.trial_ends_at)}
                           </div>
                         )}
@@ -2993,7 +2983,7 @@ export default function Home() {
                         {hasPaidPlan &&
                           profile?.subscription_cancel_at_period_end &&
                           profile?.plan_ends_at && (
-                            <div className="mt-1 text-xs text-orange-600">
+                            <div className="mt-0.5 text-[10px] text-orange-600">
                               Cancels on {formatPlanDate(profile.plan_ends_at)}
                             </div>
                           )}
@@ -3003,7 +2993,7 @@ export default function Home() {
                           profile?.plan_ends_at && (
                             <div
                               className={cn(
-                                "mt-1 text-xs",
+                                "mt-0.5 text-[10px]",
                                 theme === "dark" ? "text-slate-400" : "text-slate-500"
                               )}
                             >
@@ -3012,7 +3002,7 @@ export default function Home() {
                           )}
               
                         {!hasPaidPlan && canShowTrialEntry && (
-                          <div className="mt-2 text-[11px] leading-4 text-blue-600">
+                          <div className="mt-1 text-[10px] leading-4 text-blue-600">
                             7-day Premium trial available
                           </div>
                         )}
@@ -3021,7 +3011,7 @@ export default function Home() {
                   </div>
               
                   {showBillingActions && (
-                    <div className="mt-3 flex flex-col gap-2">
+                    <div className="mt-2 flex flex-col gap-1.5">
                       <button
                         onClick={() => setShowPlansModal(true)}
                         className={cn(
@@ -3068,7 +3058,7 @@ export default function Home() {
               
                   <div
                     className={cn(
-                      "mt-1 text-[10px] leading-4",
+                      "mt-1 text-[9px] leading-3.5",
                       theme === "dark" ? "text-slate-400" : "text-slate-500"
                     )}
                   >
@@ -3085,237 +3075,143 @@ export default function Home() {
         <main className="min-w-0 h-full overflow-hidden">
           
           {!activeId ? (
-            /* Empty State / Welcome Screen - Single View Layout */
-            <div
-              className={cn(
-                "h-full flex flex-col justify-center p-4 md:p-6 lg:p-8 overflow-y-auto transition-colors duration-300",
-                theme === "dark" ? "bg-slate-950" : "bg-transparent"
-              )}
-            >
-              <div className="max-w-6xl w-full mx-auto">
-                {/* Two Column Layout for Desktop, Stack for Mobile */}
-                <div className="flex flex-col xl:flex-row gap-5 xl:gap-8 items-center">
-                  
-                  {/* Left Side - Hero & Upload */}
-                  <div className="flex-1 text-center lg:text-left w-full">
-                    {/* Hero - Compact */}
-                    <div className="mb-4 lg:mb-6">
-                      <div
+            <div className="h-full flex flex-col p-2 sm:p-3 lg:p-4">
+              <div
+                className={cn(
+                  "flex-1 min-h-0 rounded-[28px] border shadow-sm overflow-hidden transition-colors duration-300",
+                  theme === "dark"
+                    ? "bg-slate-900 border-slate-800"
+                    : "bg-white border-slate-200"
+                )}
+              >
+                <div
+                  className={cn(
+                    "border-b px-4 py-3 sm:px-5",
+                    theme === "dark" ? "border-slate-800 bg-slate-900" : "border-slate-100 bg-white"
+                  )}
+                >
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={handleUploadButtonClick}
+                        className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-teal-600 px-3 py-2 text-sm font-medium text-white"
+                      >
+                        <Upload className="h-4 w-4" />
+                        Upload
+                      </button>
+
+                      <label
                         className={cn(
-                          "inline-flex p-2.5 rounded-2xl shadow-md mb-3 lg:mb-4",
+                          "inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium transition-colors cursor-pointer",
                           theme === "dark"
-                            ? "bg-gradient-to-br from-slate-800 via-slate-900 to-slate-800 shadow-slate-950/40"
-                            : "bg-gradient-to-br from-blue-100 via-blue-50 to-teal-100 shadow-blue-500/10"
+                            ? "border-slate-700 bg-slate-800 text-slate-200 hover:bg-slate-700"
+                            : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
                         )}
                       >
-                        <div className="p-2.5 bg-gradient-to-br from-blue-600 to-teal-500 rounded-xl shadow-lg">
-                          <Sparkles className="w-6 h-6 lg:w-8 lg:h-8 text-white" />
-                        </div>
-                      </div>
-          
-                      <h1
-                        className={cn(
-                          "text-2xl sm:text-3xl lg:text-4xl font-bold mb-6 lg:mb-8",
-                          theme === "dark" ? "text-slate-100" : "text-gray-900"
-                        )}
-                      >
-                        Welcome to{" "}
-                        <span className="bg-gradient-to-r from-blue-600 to-teal-500 bg-clip-text text-transparent">
-                          Grindx AI
-                        </span>
-                      </h1>
-          
-                      <p
-                        className={cn(
-                          "text-lg sm:text-xl lg:text-2xl font-bold",
-                          theme === "dark" ? "text-slate-200" : "text-gray-700"
-                        )}
-                      >
-                        Stop studying hard. Start studying smart.
-                      </p>
-          
-                      <p
-                        className={cn(
-                          "text-sm sm:text-base lg:text-lg max-w-lg mx-auto lg:mx-0 leading-relaxed",
-                          theme === "dark" ? "text-slate-400" : "text-gray-600"
-                        )}
-                      >
-                        Upload notes, screenshots, or snap a photo — then chat with them naturally. Get summaries, practice questions, and full mock exams.
-                      </p>
-                    </div>
-          
-                    {/* Upload Section - Compact */}
-                    <div
-                      className={cn(
-                        "rounded-3xl border-2 border-dashed transition-all duration-300 p-4 lg:p-4 mb-2 lg:mb-6",
-                        theme === "dark"
-                          ? "bg-slate-900 border-slate-700 hover:border-blue-500/50 hover:bg-slate-800"
-                          : "bg-white border-gray-200 hover:border-blue-300 hover:bg-blue-50/30"
-                      )}
-                    >
-                      <div className="flex flex-col sm:flex-row items-center gap-4">
-                        <div
-                          className={cn(
-                            "p-3 rounded-xl shrink-0",
-                            theme === "dark"
-                              ? "bg-gradient-to-br from-slate-800 to-slate-700"
-                              : "bg-gradient-to-br from-blue-100 to-teal-100"
-                          )}
-                        >
-                          <Upload className="w-6 h-6 text-blue-600" />
-                        </div>
-          
-                        <div className="flex-1 text-center sm:text-left">
-                          <h3 className={cn("font-semibold mb-1", theme === "dark" ? "text-slate-100" : "text-gray-900")}>
-                            Upload your study material
-                          </h3>
-                          <p className={cn("text-sm", theme === "dark" ? "text-slate-400" : "text-gray-500")}>
-                            PDF, Word, Text, Images, or URL
-                          </p>
-                        </div>
-          
-                        <div className="flex gap-2 shrink-0">
-                          <button
-                            onClick={handleUploadButtonClick}
-                            className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-teal-600 text-white font-medium text-sm rounded-xl hover:from-blue-700 hover:to-teal-700 shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 transition-all duration-200"
-                          >
-                            <Upload className="w-4 h-4" />
-                            Upload
-                          </button>
-          
-                          <label
-                            className={cn(
-                              "flex items-center gap-2 px-4 py-2.5 border-2 font-medium text-sm rounded-xl transition-all cursor-pointer",
-                              theme === "dark"
-                                ? "bg-slate-900 border-slate-700 text-slate-200 hover:border-amber-400/60 hover:bg-slate-800"
-                                : "bg-white border-gray-200 text-gray-700 hover:border-amber-300 hover:bg-amber-50"
-                            )}
-                          >
-                            <Camera className="w-4 h-4" />
-                            <span className="hidden sm:inline">Camera</span>
-                            <input
-                              type="file"
-                              accept="image/*"
-                              capture="environment"
-                              onChange={handleCameraUpload}
-                              className="hidden"
-                            />
-                          </label>
-                        </div>
-                      </div>
-                    </div>
-          
-                    {/* URL Input - Inline */}
-                    <div className="flex items-center gap-2 mb-4 lg:mb-6">
-                      <div className="flex-1 relative">
-                        <Link2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          
+                        <Camera className="h-4 w-4" />
+                        Camera
                         <input
-                          ref={urlInputRef}
-                          type="text"
-                          value={urlInput}
-                          onChange={(e) => setUrlInput(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                              e.preventDefault();
-                              console.log("HERO ENTER URL:", e.currentTarget.value);
-                              handleUrlAnalyze(e.currentTarget.value);
-                            }
-                          }}
-                          placeholder="Paste YouTube, website URL or Screenshot."
-                          className={cn(
-                            "w-full pl-10 pr-4 py-10 border-2 rounded-3xl text-sm focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all",
-                            theme === "dark"
-                              ? "bg-slate-900 border-slate-700 text-slate-100 placeholder:text-slate-500"
-                              : "bg-white border-gray-200 text-slate-900 placeholder:text-slate-400"
-                          )}
+                          type="file"
+                          accept="image/*"
+                          capture="environment"
+                          onChange={handleCameraUpload}
+                          className="hidden"
                         />
-                      </div>
-          
+                      </label>
+                    </div>
+
+                    <div className="relative sm:ml-auto sm:min-w-[280px] sm:flex-1 sm:max-w-[440px]">
+                      <Link2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                      <input
+                        ref={urlInputRef}
+                        type="text"
+                        value={urlInput}
+                        onChange={(e) => setUrlInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            handleUrlAnalyze(e.currentTarget.value);
+                          }
+                        }}
+                        placeholder="Paste YouTube or website URL"
+                        className={cn(
+                          "w-full rounded-xl border pl-10 pr-20 py-2.5 text-sm outline-none transition-colors",
+                          theme === "dark"
+                            ? "border-slate-700 bg-slate-800 text-slate-100 placeholder:text-slate-400"
+                            : "border-slate-200 bg-white text-slate-900 placeholder:text-slate-400"
+                        )}
+                      />
                       <button
                         type="button"
                         onClick={() => handleUrlAnalyze(urlInput)}
                         disabled={!urlInput.trim()}
-                        className="px-4 py-2.5 bg-teal-600 text-white font-medium text-sm rounded-xl hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                        className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-lg bg-teal-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
                       >
                         Analyze
                       </button>
                     </div>
-          
-                    {/* Trust Badges - Horizontal */}
-                    <div className="flex flex-wrap justify-center lg:justify-start gap-4 lg:gap-6">
-                      {[
-                        { icon: Zap, label: "AI-Powered" },
-                        { icon: TrendingUp, label: "Learn Faster" },
-                        { icon: Award, label: "Ace Exams" },
-                      ].map((stat, index) => (
-                        <div key={index} className="flex items-center gap-2">
-                          <div
-                            className={cn(
-                              "p-1.5 rounded-lg",
-                              theme === "dark" ? "bg-slate-800" : "bg-gray-100"
-                            )}
-                          >
-                            <stat.icon className={cn("w-4 h-4", theme === "dark" ? "text-slate-300" : "text-gray-600")} />
-                          </div>
-                          <span className={cn("text-sm font-medium", theme === "dark" ? "text-slate-300" : "text-gray-700")}>
-                            {stat.label}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
                   </div>
-          
-                  {/* Right Side - Feature Cards Grid */}
-                  <div className="flex-1 w-full">
-                    <div className="grid grid-cols-2 gap-3 lg:gap-4">
-                      {[
-                        { icon: BookOpen, title: "Smart Summaries", description: "Instant concise summaries", color: "blue" },
-                        { icon: Lightbulb, title: "Key Concepts", description: "Extract core ideas", color: "amber" },
-                        { icon: Target, title: "Practice", description: "AI-generated questions", color: "teal" },
-                        { icon: Award, title: "Mock Tests", description: "Timed assessments", color: "purple" },
-                      ].map((feature, index) => (
-                        <div
-                          key={index}
-                          className={cn(
-                            "group p-4 lg:p-5 rounded-xl border-2 transition-all duration-300",
-                            theme === "dark"
-                              ? "bg-slate-900 border-slate-800 hover:border-blue-500/40 hover:shadow-lg hover:shadow-slate-950/30"
-                              : "bg-white border-gray-100 hover:border-blue-200 hover:shadow-lg hover:shadow-blue-500/10"
-                          )}
-                        >
-                          <div
-                            className={cn(
-                              "inline-flex p-2 lg:p-2.5 rounded-lg mb-2 lg:mb-3",
-                              feature.color === "blue" && "bg-blue-100 text-blue-600",
-                              feature.color === "amber" && "bg-amber-100 text-amber-600",
-                              feature.color === "teal" && "bg-teal-100 text-teal-600",
-                              feature.color === "purple" && "bg-purple-100 text-purple-600"
-                            )}
-                          >
-                            <feature.icon className="w-4 h-4 lg:w-5 lg:h-5" />
-                          </div>
-          
-                          <h3 className={cn("font-semibold text-sm lg:text-base mb-1", theme === "dark" ? "text-slate-100" : "text-gray-900")}>
-                            {feature.title}
-                          </h3>
-          
-                          <p className={cn("text-xs lg:text-sm", theme === "dark" ? "text-slate-400" : "text-gray-500")}>
-                            {feature.description}
-                          </p>
-                        </div>
-                      ))}
+                </div>
+
+                <div
+                  className={cn(
+                    "flex flex-1 min-h-0 flex-col justify-center px-6 text-center",
+                    theme === "dark" ? "bg-slate-900" : "bg-white"
+                  )}
+                >
+                  <div className="mx-auto max-w-xl">
+                    <div className="mb-4 inline-flex rounded-2xl bg-gradient-to-br from-blue-600/20 to-teal-500/20 p-3">
+                      <MessageSquare className="h-7 w-7 text-blue-500" />
                     </div>
-                    
-                    {/* Hint */}
-                    <p className={cn("text-xs mt-3 lg:mt-4 text-center", theme === "dark" ? "text-slate-500" : "text-gray-400")}>
-                      Tip: You can also paste screenshots (Ctrl+V) or drag and drop files
+                    <h2 className={cn("text-xl font-semibold", theme === "dark" ? "text-slate-100" : "text-slate-900")}>
+                      Your chat workspace is ready
+                    </h2>
+                    <p className={cn("mt-2 text-sm", theme === "dark" ? "text-slate-400" : "text-slate-600")}>
+                      Upload a document, screenshot, or URL to start a grounded conversation in the center panel.
                     </p>
+                  </div>
+                </div>
+
+                <div
+                  className={cn(
+                    "border-t px-4 py-3 sm:px-5",
+                    theme === "dark" ? "border-slate-800 bg-slate-900" : "border-slate-200 bg-white"
+                  )}
+                >
+                  <div className="flex items-end gap-2">
+                    <div className="relative flex-1">
+                      <textarea
+                        value={question}
+                        onChange={(e) => setQuestion(e.target.value)}
+                        placeholder="Upload a document to start chatting..."
+                        disabled
+                        className={cn(
+                          "w-full min-h-[62px] max-h-44 resize-none overflow-y-auto rounded-3xl px-5 py-4 pr-14 text-[15px] outline-none transition-all",
+                          theme === "dark"
+                            ? "bg-slate-800/90 text-slate-300 placeholder:text-slate-500"
+                            : "bg-slate-100 text-slate-600 placeholder:text-slate-500"
+                        )}
+                        rows={1}
+                      />
+                      <button
+                        disabled
+                        className="absolute right-3 bottom-3 rounded-full bg-slate-400/40 p-2 text-slate-300"
+                      >
+                        <Mic className="h-5 w-5" />
+                      </button>
+                    </div>
+                    <button
+                      disabled
+                      className="h-12 w-12 rounded-full bg-gradient-to-r from-blue-600 to-teal-600 text-white opacity-50"
+                    >
+                      <Send className="h-5 w-5" />
+                    </button>
                   </div>
                 </div>
               </div>
             </div>
           ) : (
+
 
             /* Document Loaded - Show Tabs and Content */
             <div className="h-full flex flex-col p-2 sm:p-3 lg:p-4">
@@ -3409,7 +3305,7 @@ export default function Home() {
 
                     <div
                       className={cn(
-                        "flex-1 min-h-0 overflow-y-auto px-4 py-3 sm:px-5 sm:py-4 space-y-4",
+                        "flex-1 min-h-0 overflow-y-auto px-4 py-4 sm:px-5 sm:py-5 space-y-5",
                         theme === "dark" ? "bg-slate-900" : "bg-white"
                       )}
                     >
@@ -3539,10 +3435,10 @@ export default function Home() {
                             }}
                             placeholder="Ask anything about your document..."
                             className={cn(
-                              "w-full px-4 py-3 pr-12 border-2 rounded-xl resize-none overflow-y-auto focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all min-h-[52px] max-h-40",
+                              "w-full min-h-[62px] max-h-44 resize-none overflow-y-auto rounded-3xl px-5 py-4 pr-14 text-[15px] outline-none transition-all",
                               theme === "dark"
-                                ? "bg-slate-950 border-slate-700 !text-white caret-white placeholder:!text-slate-400"
-                                : "bg-white border-gray-200 !text-slate-900 caret-slate-900 placeholder:!text-slate-400"
+                                ? "bg-slate-800/90 !text-white caret-white placeholder:!text-slate-400"
+                                : "bg-slate-100 !text-slate-900 caret-slate-900 placeholder:!text-slate-500"
                             )}
                             rows={1}
                           />
@@ -3551,7 +3447,7 @@ export default function Home() {
                           <button
                             onClick={handleVoiceInput}
                             className={cn(
-                              "absolute right-3 bottom-3 p-1.5 rounded-lg transition-colors",
+                              "absolute right-4 bottom-4 p-1.5 rounded-full transition-colors",
                               isListening
                                 ? "bg-red-100 text-red-600"
                                 : "text-gray-400 hover:text-gray-600 hover:bg-gray-100"
@@ -3563,7 +3459,7 @@ export default function Home() {
                         {isStreaming ? (
                           <button
                             onClick={handleStopAnswer}
-                            className="p-3 bg-red-500 text-white rounded-xl hover:bg-red-600 shadow-lg transition-all"
+                            className="h-12 w-12 rounded-full bg-red-500 text-white hover:bg-red-600 shadow-lg transition-all flex items-center justify-center"
                           >
                             <X className="w-5 h-5" />
                           </button>
@@ -3571,7 +3467,7 @@ export default function Home() {
                           <button
                             onClick={() => handleAsk("chat")}
                             disabled={!question.trim() || isAsking}
-                            className="p-3 bg-gradient-to-r from-blue-600 to-teal-600 text-white rounded-xl hover:from-blue-700 hover:to-teal-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-500/25 transition-all"
+                            className="h-12 w-12 rounded-full bg-gradient-to-r from-blue-600 to-teal-600 text-white hover:from-blue-700 hover:to-teal-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-500/25 transition-all flex items-center justify-center"
                           >
                             <Send className="w-5 h-5" />
                           </button>
@@ -3934,71 +3830,7 @@ export default function Home() {
                       </>
                     )}
 
-                    <div
-                      className={cn(
-                        "border-t px-4 py-4 sm:px-5",
-                        theme === "dark"
-                          ? "border-slate-800 bg-slate-900"
-                          : "border-slate-200 bg-white"
-                      )}
-                    >
-                      <div className="flex items-end gap-2">
-                        <div className="flex-1 relative">
-                          <textarea
-                            value={question}
-                            onChange={(e) => setQuestion(e.target.value)}
-                            onInput={(e) => {
-                              const el = e.currentTarget;
-                              el.style.height = "auto";
-                              el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
-                            }}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter" && !e.shiftKey) {
-                                e.preventDefault();
-                                handleAsk("practice");
-                              }
-                            }}
-                            placeholder="Ask about these practice questions..."
-                            className={cn(
-                              "w-full px-4 py-3 pr-12 border-2 rounded-xl resize-none overflow-y-auto focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all min-h-[52px] max-h-40",
-                              theme === "dark"
-                                ? "bg-slate-950 border-slate-700 !text-white caret-white placeholder:!text-slate-400"
-                                : "bg-white border-gray-200 !text-slate-900 caret-slate-900 placeholder:!text-slate-400"
-                            )}
-                            rows={1}
-                          />
 
-                          <button
-                            onClick={handleVoiceInput}
-                            className={cn(
-                              "absolute right-3 bottom-3 p-1.5 rounded-lg transition-colors",
-                              isListening
-                                ? "bg-red-100 text-red-600"
-                                : "text-gray-400 hover:text-gray-600 hover:bg-gray-100"
-                            )}
-                          >
-                            <Mic className="w-5 h-5" />
-                          </button>
-                        </div>
-
-                        {isStreaming ? (
-                          <button
-                            onClick={handleStopAnswer}
-                            className="p-3 bg-red-500 text-white rounded-xl hover:bg-red-600 shadow-lg transition-all"
-                          >
-                            <X className="w-5 h-5" />
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => handleAsk("practice")}
-                            disabled={!question.trim() || isAsking}
-                            className="p-3 bg-gradient-to-r from-blue-600 to-teal-600 text-white rounded-xl hover:from-blue-700 hover:to-teal-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-500/25 transition-all"
-                          >
-                            <Send className="w-5 h-5" />
-                          </button>
-                        )}
-                      </div>
-                    </div>
                   </div>
                 )}
 
