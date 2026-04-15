@@ -2922,10 +2922,10 @@ export default function Home() {
               user && (
                 <div
                   className={cn(
-                    "rounded-md border px-1.5 py-1 shadow-sm transition-colors duration-300",
+                    "rounded-md px-1.5 py-1 transition-colors duration-300",
                     theme === "dark"
-                      ? "border-slate-700 bg-slate-900"
-                      : "border-slate-200 bg-white/80"
+                      ? "bg-slate-900/35"
+                      : "bg-white/50"
                   )}
                 >
                   <div className="flex items-start gap-1.5">
@@ -2934,7 +2934,7 @@ export default function Home() {
                       onClick={() => setShowBillingActions((prev) => !prev)}
                       className={cn(
                         "flex w-full items-start gap-1.5 rounded-md text-left transition p-0.5",
-                        theme === "dark" ? "hover:bg-slate-800" : "hover:bg-slate-50"
+                        theme === "dark" ? "hover:bg-slate-800/60" : "hover:bg-white/70"
                       )}
                     >
                       <div
