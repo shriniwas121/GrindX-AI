@@ -2918,24 +2918,24 @@ export default function Home() {
               user && (
                 <div
                   className={cn(
-                    "rounded-lg border px-2 py-1.5 shadow-sm transition-colors duration-300",
+                    "rounded-md border px-1.5 py-1 shadow-sm transition-colors duration-300",
                     theme === "dark"
                       ? "border-slate-700 bg-slate-900"
                       : "border-slate-200 bg-white/80"
                   )}
                 >
-                  <div className="flex items-start gap-3">
+                  <div className="flex items-start gap-1.5">
                     <button
                       type="button"
                       onClick={() => setShowBillingActions((prev) => !prev)}
                       className={cn(
-                        "flex w-full items-start gap-2 rounded-lg text-left transition p-0.5",
+                        "flex w-full items-start gap-1.5 rounded-md text-left transition p-0.5",
                         theme === "dark" ? "hover:bg-slate-800" : "hover:bg-slate-50"
                       )}
                     >
                       <div
                         className={cn(
-                          "flex h-7 w-7 items-center justify-center rounded-full text-white text-[10px] font-semibold uppercase shrink-0",
+                          "flex h-6 w-6 items-center justify-center rounded-full text-white text-[9px] font-semibold uppercase shrink-0",
                           theme === "dark" ? "bg-slate-600" : "bg-slate-400"
                         )}
                       >
@@ -2945,7 +2945,7 @@ export default function Home() {
                       <div className="min-w-0 flex-1">
                         <div
                           className={cn(
-                            "truncate text-[11px] font-semibold leading-4",
+                            "truncate text-[10px] font-semibold leading-3.5",
                             theme === "dark" ? "text-slate-100" : "text-slate-900"
                           )}
                         >
@@ -2954,7 +2954,7 @@ export default function Home() {
               
                         <div
                           className={cn(
-                            "mt-0.5 text-[10px] font-medium leading-4",
+                            "mt-0.5 text-[9px] font-medium leading-3.5",
                             theme === "dark" ? "text-slate-300" : "text-slate-600"
                           )}
                         >
@@ -2975,7 +2975,7 @@ export default function Home() {
                         </div>
               
                         {profile?.subscription_status === "trialing" && profile?.trial_ends_at && (
-                          <div className="mt-0.5 text-[10px] text-amber-600">
+                          <div className="mt-0.5 text-[9px] text-amber-600">
                             Trial ends on {formatPlanDate(profile.trial_ends_at)}
                           </div>
                         )}
@@ -2983,7 +2983,7 @@ export default function Home() {
                         {hasPaidPlan &&
                           profile?.subscription_cancel_at_period_end &&
                           profile?.plan_ends_at && (
-                            <div className="mt-0.5 text-[10px] text-orange-600">
+                            <div className="mt-0.5 text-[9px] text-orange-600">
                               Cancels on {formatPlanDate(profile.plan_ends_at)}
                             </div>
                           )}
@@ -2993,7 +2993,7 @@ export default function Home() {
                           profile?.plan_ends_at && (
                             <div
                               className={cn(
-                                "mt-0.5 text-[10px]",
+                                "mt-0.5 text-[9px]",
                                 theme === "dark" ? "text-slate-400" : "text-slate-500"
                               )}
                             >
@@ -3002,7 +3002,7 @@ export default function Home() {
                           )}
               
                         {!hasPaidPlan && canShowTrialEntry && (
-                          <div className="mt-1 text-[10px] leading-4 text-blue-600">
+                          <div className="mt-0.5 text-[9px] leading-3.5 text-blue-600">
                             7-day Premium trial available
                           </div>
                         )}
@@ -3011,11 +3011,11 @@ export default function Home() {
                   </div>
               
                   {showBillingActions && (
-                    <div className="mt-2 flex flex-col gap-1.5">
+                    <div className="mt-1.5 flex flex-col gap-1">
                       <button
                         onClick={() => setShowPlansModal(true)}
                         className={cn(
-                          "w-full rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition",
+                          "w-full rounded-md border px-2 py-1 text-[11px] font-semibold transition",
                           theme === "dark"
                             ? "border-slate-700 bg-slate-800 text-slate-100 hover:bg-slate-700"
                             : "border-slate-300 bg-white text-slate-800 hover:bg-slate-50"
@@ -3030,7 +3030,7 @@ export default function Home() {
                             onClick={handleManageSubscription}
                             disabled={isBillingLoading}
                             className={cn(
-                              "w-full rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-70",
+                              "w-full rounded-md border px-2 py-1 text-[11px] font-semibold transition disabled:cursor-not-allowed disabled:opacity-70",
                               theme === "dark"
                                 ? "border-slate-700 bg-slate-800 text-slate-100 hover:bg-slate-700"
                                 : "border-slate-300 bg-white text-slate-800 hover:bg-slate-50"
@@ -3043,7 +3043,7 @@ export default function Home() {
                             onClick={handleCancelSubscription}
                             disabled={isBillingLoading}
                             className={cn(
-                              "w-full rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-70",
+                              "w-full rounded-md border px-2 py-1 text-[11px] font-semibold transition disabled:cursor-not-allowed disabled:opacity-70",
                               theme === "dark"
                                 ? "border-rose-900 bg-rose-950/40 text-rose-300 hover:bg-rose-950/60"
                                 : "border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100"
@@ -3058,7 +3058,7 @@ export default function Home() {
               
                   <div
                     className={cn(
-                      "mt-1 text-[9px] leading-3.5",
+                      "mt-0.5 text-[8.5px] leading-3",
                       theme === "dark" ? "text-slate-400" : "text-slate-500"
                     )}
                   >
@@ -3435,7 +3435,7 @@ export default function Home() {
                             }}
                             placeholder="Ask anything about your document..."
                             className={cn(
-                              "w-full min-h-[62px] max-h-44 resize-none overflow-y-auto rounded-3xl px-5 py-4 pr-14 text-[15px] outline-none transition-all",
+                              "w-full min-h-[64px] max-h-44 resize-none overflow-y-auto rounded-3xl border-none px-5 py-4 pr-14 text-[15px] outline-none ring-0 transition-all focus:outline-none focus:ring-0",
                               theme === "dark"
                                 ? "bg-slate-800/90 !text-white caret-white placeholder:!text-slate-400"
                                 : "bg-slate-100 !text-slate-900 caret-slate-900 placeholder:!text-slate-500"
