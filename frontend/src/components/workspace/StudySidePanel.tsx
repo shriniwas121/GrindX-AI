@@ -84,6 +84,62 @@ export function StudySidePanel({
   const isStudyTab = activeTab !== "chat" && Boolean(activeId);
   const content = translatedTabContent || tabContent;
   const canExpand = activeTab !== "chat" && Boolean(activeId);
+  const controlButtonClass = cn(
+    "flex h-8 w-8 items-center justify-center rounded-lg border transition-colors",
+    theme === "dark"
+      ? "border-slate-700 bg-slate-800 text-slate-200 hover:bg-slate-700"
+      : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+  );
+
+  if (isCollapsed) {
+    return (
+      <div className={cn("flex h-full min-h-0 flex-col items-center justify-between py-3", theme === "dark" ? "bg-slate-900" : "bg-white")}>
+        <div className="flex flex-col items-center gap-2">
+          {onToggleCollapsed && (
+            <button
+              onClick={onToggleCollapsed}
+              className={controlButtonClass}
+              title="Expand right panel"
+              aria-label="Expand right panel"
+            >
+              <PanelRightOpen className="h-4 w-4" />
+            </button>
+          )}
+          {canExpand && (
+            <button
+              onClick={onToggleExpanded}
+              className={controlButtonClass}
+              title={isExpanded ? "Restore workspace" : "Expand study workspace"}
+              aria-label={isExpanded ? "Restore workspace" : "Expand study workspace"}
+            >
+              {isExpanded ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+            </button>
+          )}
+        </div>
+
+        <div className="flex flex-col items-center gap-2">
+          {studyTabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => onSelectTab(tab.id)}
+              className={cn(
+                "flex h-9 w-9 items-center justify-center rounded-lg border transition-colors",
+                activeTab === tab.id
+                  ? "border-blue-500 bg-blue-500/20 text-blue-500"
+                  : theme === "dark"
+                  ? "border-slate-700 bg-slate-900 text-slate-300 hover:bg-slate-800"
+                  : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+              )}
+              title={tab.label}
+              aria-label={tab.label}
+            >
+              <tab.icon className="h-4 w-4" />
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={cn("flex h-full min-h-0 flex-col", theme === "dark" ? "bg-slate-900" : "bg-white")}>
@@ -102,37 +158,28 @@ export function StudySidePanel({
               Summary, concepts, practice, and mock tools in one panel.
             </p>
           </div>
-          {canExpand && (
-            <div className="flex items-center gap-2">
-              {onToggleCollapsed && (
-                <button
-                  onClick={onToggleCollapsed}
-                  className={cn(
-                    "inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors",
-                    theme === "dark"
-                      ? "border-slate-700 bg-slate-800 text-slate-200 hover:bg-slate-700"
-                      : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
-                  )}
-                  title={isCollapsed ? "Expand right panel" : "Collapse right panel"}
-                >
-                  {isCollapsed ? <PanelRightOpen className="h-3.5 w-3.5" /> : <PanelRightClose className="h-3.5 w-3.5" />}
-                  {isCollapsed ? "Expand panel" : "Collapse panel"}
-                </button>
-              )}
+          <div className="flex items-center gap-2">
+            {onToggleCollapsed && (
+              <button
+                onClick={onToggleCollapsed}
+                className={controlButtonClass}
+                title="Collapse right panel"
+                aria-label="Collapse right panel"
+              >
+                <PanelRightClose className="h-4 w-4" />
+              </button>
+            )}
+            {canExpand && (
               <button
                 onClick={onToggleExpanded}
-                className={cn(
-                  "inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors",
-                  theme === "dark"
-                    ? "border-slate-700 bg-slate-800 text-slate-200 hover:bg-slate-700"
-                    : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
-                )}
+                className={controlButtonClass}
+                title={isExpanded ? "Restore workspace" : "Expand study workspace"}
+                aria-label={isExpanded ? "Restore workspace" : "Expand study workspace"}
               >
-                {isExpanded ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
-                {isExpanded ? "Back to workspace" : "Expand study workspace"}
+                {isExpanded ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
               </button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
 
