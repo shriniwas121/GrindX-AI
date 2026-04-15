@@ -2,13 +2,44 @@
 import { supabase } from "@/lib/supabase";
 import { useEffect, useState, useRef, useMemo } from "react";
 import ReactMarkdown from "react-markdown";
-import { 
-  BookOpen, Upload, Link2, Camera, Mic, Send, X, Menu, Plus, 
-  FileText, Video, Globe, Trash2, Pencil, Volume2, VolumeX, 
-  ChevronLeft, ChevronRight, RotateCcw, CheckCircle2, XCircle,
-  Sparkles, Brain, Target, MessageSquare, GraduationCap, Zap,
-  LogIn, Mail, User, Lock, Eye, EyeOff, Loader2, Lightbulb, 
-  Award, TrendingUp, Library, Clock, Sun, Moon
+import { WorkspaceShell } from "@/components/workspace/WorkspaceShell";
+import { LibrarySidebar } from "@/components/workspace/LibrarySidebar";
+import { StudySidePanel } from "@/components/workspace/StudySidePanel";
+import {
+  BookOpen,
+  Upload,
+  Link2,
+  Camera,
+  Mic,
+  Send,
+  X,
+  Menu,
+  FileText,
+  Volume2,
+  VolumeX,
+  ChevronLeft,
+  ChevronRight,
+  RotateCcw,
+  CheckCircle2,
+  XCircle,
+  Sparkles,
+  Brain,
+  Target,
+  MessageSquare,
+  GraduationCap,
+  Zap,
+  LogIn,
+  Mail,
+  User,
+  Lock,
+  Eye,
+  EyeOff,
+  Loader2,
+  Lightbulb,
+  Award,
+  TrendingUp,
+  Sun,
+  Moon,
 } from "lucide-react";
 
 // Simple cn utility - combines class names
@@ -2341,6 +2372,30 @@ export default function Home() {
     { id: "mock" as const, label: "Mock Test", icon: Award },
   ];
 
+  const desktopStudyPanel = (
+    <StudySidePanel
+      theme={theme}
+      activeTab={activeTab}
+      onSelectTab={(tab) => handleTabClick(tab)}
+      isTabLoading={isTabLoading}
+      tabContent={tabContent}
+      translatedTabContent={translatedTabContent}
+      mockDifficulty={mockDifficulty}
+      allowedMockDifficulties={allowedMockDifficulties}
+      onSelectMockDifficulty={(difficulty) => {
+        setMockDifficulty(difficulty);
+        setQuizAnswers({});
+        setQuizScore(null);
+        setCurrentQ(0);
+        setTranslatedTabContent("");
+        handleTabClick("mock", difficulty);
+      }}
+      quizData={quizData}
+      quizScore={quizScore}
+      currentQ={currentQ}
+    />
+  );
+
 
   return (
     <div
@@ -2818,192 +2873,29 @@ export default function Home() {
         </div>
       </header>
 
-      <div className="flex">
-        {/* Sidebar Overlay */}
-        {showSidebar && (
-          <div
-            className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm lg:hidden"
-            onClick={() => setShowSidebar(false)}
-          />
-        )}
-
-        {/* Sidebar */}
-
-        <aside
-          className={cn(
-            "fixed lg:sticky top-16 left-0 z-50 lg:z-30 w-[88vw] max-w-72 sm:w-72 h-[calc(100vh-4rem)] border-r transform transition-all duration-300 ease-in-out shadow-xl lg:shadow-none",
-            theme === "dark"
-              ? "bg-slate-950 border-slate-800"
-              : "bg-white border-gray-200",
-            showSidebar ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
-          )}
-        >
-
-          <div className="flex flex-col h-full">
-            {/* Sidebar Header */}
-
-
-            {/* Upload Buttons */}
-            <div className="p-4 space-y-2">
-              <button
-                onClick={startNewChat}
-                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-teal-600 text-white font-medium rounded-xl hover:from-blue-700 hover:to-teal-700 shadow-md hover:shadow-lg transition-all duration-200"
-              >
-                <Plus className="w-4 h-4" />
-                New Document
-              </button>
-            </div>
-
-
-            <div
-              className={cn(
-                "flex items-center justify-between px-4 py-4 border-b transition-colors duration-300",
-                theme === "dark" ? "border-slate-800" : "border-gray-100"
-              )}
-            >
-
-              <div className="flex items-center gap-2">
-                <Library className="w-5 h-5 text-blue-600" />
-                <h2 className={cn("font-semibold", theme === "dark" ? "text-slate-100" : "text-gray-900")}>
-                  My Library
-                </h2>
-              </div>
-
-              <button
-                onClick={() => setShowSidebar(false)}
-
-                className={cn(
-                  "p-1.5 rounded-lg lg:hidden transition-colors",
-                  theme === "dark"
-                    ? "text-slate-400 hover:text-slate-200 hover:bg-slate-800"
-                    : "text-gray-400 hover:text-gray-600 hover:bg-gray-100"
-                )}
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-
-
-            {/* Library List */}
-            <div className="flex-1 overflow-y-auto px-4 pb-4">
-              {library.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 text-center">
-
-                  <div
-                    className={cn(
-                      "p-4 rounded-2xl mb-4 transition-colors",
-                      theme === "dark" ? "bg-slate-800" : "bg-gray-100"
-                    )}
-                  >
-
-                    <BookOpen className="w-8 h-8 text-gray-400" />
-                  </div>
-
-                  <p className={cn("text-sm", theme === "dark" ? "text-slate-300" : "text-gray-500")}>
-                    No documents yet
-                  </p>
-                  <p className={cn("text-xs mt-1", theme === "dark" ? "text-slate-500" : "text-gray-400")}>
-                    Upload your first study material
-                  </p>
-
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {library.map((item) => (
-                    <div
-                      key={item.id}
-
-
-                      className={cn(
-                        "group relative p-3 rounded-xl cursor-pointer transition-all duration-200",
-                        activeId === item.id
-                          ? theme === "dark"
-                            ? "bg-slate-800 border-2 border-blue-500/50 shadow-sm"
-                            : "bg-gradient-to-r from-blue-50 to-teal-50 border-2 border-blue-200 shadow-sm"
-                          : theme === "dark"
-                            ? "bg-slate-900 border-2 border-transparent hover:bg-slate-800 hover:border-slate-700"
-                            : "bg-gray-50 border-2 border-transparent hover:bg-gray-100 hover:border-gray-200"
-                      )}
-
-                      onClick={() => handleSelectItem(item)}
-                    >
-                      <div className="flex items-start gap-3">
-                        <div
-
-                          className={cn(
-                            "p-2 rounded-lg transition-colors",
-                            activeId === item.id
-                              ? theme === "dark"
-                                ? "bg-blue-500/15"
-                                : "bg-blue-100"
-                              : theme === "dark"
-                                ? "bg-slate-800"
-                                : "bg-white"
-                          )}
-
-                        >
-                          {item.type === "VIDEO" && <Video className="w-4 h-4 text-red-600" />}
-                          {item.type === "WEB" && <Globe className="w-4 h-4 text-teal-600" />}
-                          {(item.type === "PDF" || item.type === "TXT" || item.type === "WORD" || item.type === "SAS") && (
-                            <FileText className="w-4 h-4 text-blue-600" />
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-
-
-                          <p className={cn("font-medium text-sm truncate", theme === "dark" ? "text-slate-100" : "text-gray-900")}>
-                            {item.name}
-                          </p>
-                          <p className={cn("text-xs mt-0.5", theme === "dark" ? "text-slate-400" : "text-gray-500")}>
-                            {item.status}
-                          </p>
-
-                        </div>
-                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-
-                              handleRename(item.id);
-                            }}
-
-                            className={cn(
-                              "p-1.5 rounded-lg transition-all",
-                              theme === "dark"
-                                ? "text-slate-400 hover:text-blue-300 hover:bg-slate-800"
-                                : "text-gray-400 hover:text-blue-600 hover:bg-blue-50"
-                            )}
-
-                          >
-                            <Pencil className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteItem(item.id);
-                            }}
-
-                            className={cn(
-                              "p-1.5 rounded-lg transition-all",
-                              theme === "dark"
-                                ? "text-slate-400 hover:text-red-300 hover:bg-slate-800"
-                                : "text-gray-400 hover:text-red-500 hover:bg-red-50"
-                            )}
-
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-
-              {user && (
+      <WorkspaceShell
+        theme={theme}
+        showSidebar={showSidebar}
+        onSidebarOverlayClick={() => setShowSidebar(false)}
+        showRightPanel={Boolean(activeId)}
+        sidebar={
+          <LibrarySidebar
+            theme={theme}
+            library={library}
+            activeId={activeId}
+            showCloseButton
+            onCloseSidebar={() => setShowSidebar(false)}
+            onStartNewDocument={startNewChat}
+            onSelectItem={(id) => {
+              const selectedItem = library.find((item) => item.id === id);
+              if (selectedItem) {
+                handleSelectItem(selectedItem);
+              }
+            }}
+            onRenameItem={handleRename}
+            onDeleteItem={handleDeleteItem}
+            footer={
+              user && (
                 <div
                   className={cn(
                     "mb-4 rounded-2xl border px-4 py-4 shadow-sm transition-colors duration-300",
@@ -3153,13 +3045,14 @@ export default function Home() {
                     Free includes Mock Test. Upgrade only when you need higher limits.
                   </div>
                 </div>
-              )}
-          </div>
-        </aside>
-
-
+              )
+            }
+          />
+        }
+        rightPanel={desktopStudyPanel}
+      >
         {/* Main Content */}
-        <main className="min-w-0 flex-1 h-[calc(100vh-4rem)] overflow-hidden">
+        <main className="min-w-0 h-full overflow-hidden">
           
           {!activeId ? (
             /* Empty State / Welcome Screen - Single View Layout */
@@ -3397,7 +3290,7 @@ export default function Home() {
             /* Document Loaded - Show Tabs and Content */
             <div className="h-full flex flex-col p-2 sm:p-3 lg:p-4">
               {/* Tabs */}
-              <div className="mb-4">
+              <div className="mb-4 lg:hidden">
                 <div
                   className={cn(
                     "flex w-full overflow-x-auto gap-2 p-1.5 rounded-2xl border shadow-sm scrollbar-thin transition-colors duration-300",
@@ -3658,7 +3551,7 @@ export default function Home() {
 
 
                 {/* Summary Tab */}
-                {activeTab === "summary" && (
+                {activeTab === "summary" && !activeId && (
 
                   <div
                     className={cn(
@@ -3778,7 +3671,7 @@ export default function Home() {
                 )}
 
                 {/* Concepts Tab */}
-                {activeTab === "concepts" && (
+                {activeTab === "concepts" && !activeId && (
 
 
                   <div
@@ -3895,7 +3788,7 @@ export default function Home() {
 
 
                 {/* Practice Tab */}
-                {activeTab === "practice" && (
+                {activeTab === "practice" && !activeId && (
                   <div
                     className={cn(
                       "flex h-full min-h-0 flex-col",
@@ -4076,7 +3969,7 @@ export default function Home() {
 
 
                 {/* Mock Test Tab */}
-                {activeTab === "mock" && (
+                {activeTab === "mock" && !activeId && (
 
                   <div
                     className={cn(
@@ -4383,7 +4276,7 @@ export default function Home() {
             </div>
           )}
         </main>
-      </div>
+      </WorkspaceShell>
 
       {/* Hidden File Input */}
       <input
