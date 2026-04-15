@@ -2408,10 +2408,10 @@ export default function Home() {
       currentQ={currentQ}
       onCurrentQChange={setCurrentQ}
       onQuizSubmit={handleQuizSubmit}
-      isExpanded={isStudyExpanded}
-      onToggleExpanded={() => setIsStudyExpanded((prev) => !prev)}
       isCollapsed={isStudyCollapsed}
       onToggleCollapsed={() => setIsStudyCollapsed((prev) => !prev)}
+      isExpanded={isStudyExpanded}
+      onToggleExpanded={() => setIsStudyExpanded((prev) => !prev)}
     />
   );
 
