@@ -142,7 +142,12 @@ export function StudySidePanel({
   }
 
   return (
-    <div className={cn("flex h-full min-h-0 flex-col", theme === "dark" ? "bg-slate-900" : "bg-white")}>
+    <div
+      className={cn(
+        "flex h-full min-h-0 flex-col rounded-[28px] border shadow-sm overflow-hidden",
+        theme === "dark" ? "bg-slate-900 border-slate-500" : "bg-white border-slate-300"
+      )}
+    >
       <div
         className={cn(
           "border-b px-4 py-4",
@@ -441,7 +446,7 @@ export function StudySidePanel({
           <div className="flex h-full min-h-0 flex-col">
             <div
               className={cn(
-                "flex items-center justify-between gap-1 border-b px-2 py-2",
+                "flex items-center justify-between gap-1 border-b px-2 py-1",
                 theme === "dark" ? "border-slate-800 bg-slate-900" : "border-slate-200 bg-white"
               )}
             >
@@ -449,7 +454,13 @@ export function StudySidePanel({
                 <select
                   value={chatLanguage}
                   onChange={(e) => onLanguageChange(e.target.value)}
-                  className="rounded-xl border-2 border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-500"
+                  className={cn(
+                    "rounded-xl border-2 px-4 py-2 text-sm font-medium transition-colors",
+                    theme === "dark"
+                      ? "border-blue-500 bg-slate-700 text-slate-100 hover:bg-slate-700"
+                      : "border-blue-500 bg-slate-100 text-slate-700 hover:bg-slate-100"
+                  )}
+
                 >
                   <option value="english">English</option>
                   <option value="hindi">Hindi</option>
@@ -460,12 +471,20 @@ export function StudySidePanel({
                   <option value="japanese">Japanese</option>
                   <option value="chinese">chinese</option>
                 </select>
+
                 <button
                   onClick={onTranslate}
-                  className="rounded-xl border-2 border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 transition-all hover:bg-gray-50"
+                  className={cn(
+                    "rounded-xl border-2 px-4 py-2 text-sm font-medium transition-colors",
+                    theme === "dark"
+                      ? "border-blue-500 bg-slate-700 text-slate-100 hover:bg-slate-700"
+                      : "border-blue-500 bg-slate-100 text-slate-700 hover:bg-slate-100"
+                  )}
                 >
                   Translate
                 </button>
+
+
               </div>
               <div className="flex flex-col items-end gap-1">
                 <button

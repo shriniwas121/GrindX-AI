@@ -2459,9 +2459,27 @@ export default function Home() {
       onCurrentQChange={setCurrentQ}
       onQuizSubmit={handleQuizSubmit}
       isCollapsed={isStudyCollapsed}
-      onToggleCollapsed={() => setIsStudyCollapsed((prev) => !prev)}
+
+      onToggleCollapsed={() => {
+        if (isStudyExpanded) {
+          setIsStudyExpanded(false);
+          setIsStudyCollapsed(true);
+          return;
+        }
+        setIsStudyCollapsed((prev) => !prev);
+      }}
+
       isExpanded={isStudyExpanded}
-      onToggleExpanded={() => setIsStudyExpanded((prev) => !prev)}
+
+      onToggleExpanded={() => {
+        if (isStudyCollapsed) {
+          setIsStudyCollapsed(false);
+          setIsStudyExpanded(true);
+          return;
+        }
+        setIsStudyExpanded((prev) => !prev);
+      }}
+
     />
   );
 
@@ -2853,7 +2871,7 @@ export default function Home() {
             : "bg-white/80"
         )}
       >
-        <div className="max-w-7xl mx-auto px-3 sm:px-5 lg:px-8">
+        <div className="max-w-1xl mx-auto px-3 sm:px-5 lg:px-8">
           <div className="flex items-center justify-between h-16 gap-3">
             {/* Left: Menu + Logo */}
             <div className="flex items-center gap-3">
@@ -2972,10 +2990,10 @@ export default function Home() {
               user && (
                 <div
                   className={cn(
-                    "rounded-md px-1.5 py-1 transition-colors duration-300",
+                    "px-1.5 py-1 transition-colors duration-300",
                     theme === "dark"
-                      ? "bg-slate-900/35"
-                      : "bg-white/50"
+                      ? "bg-transparent"
+                      : "bg-transparent"
                   )}
                 >
                   <div className="flex items-start gap-1.5">
@@ -2983,8 +3001,8 @@ export default function Home() {
                       type="button"
                       onClick={() => setShowBillingActions((prev) => !prev)}
                       className={cn(
-                        "flex w-full items-start gap-1.5 rounded-md text-left transition p-0.5",
-                        theme === "dark" ? "hover:bg-slate-800/60" : "hover:bg-white/70"
+                        "flex w-full items-start gap-1.5 text-left transition p-0.5 rounded-xl",
+                        theme === "dark" ? "hover:bg-slate-800/40" : "hover:bg-slate-50/70"
                       )}
                     >
                       <div
@@ -3110,14 +3128,6 @@ export default function Home() {
                     </div>
                   )}
               
-                  <div
-                    className={cn(
-                      "mt-0.5 text-[8.5px] leading-3",
-                      theme === "dark" ? "text-slate-400" : "text-slate-500"
-                    )}
-                  >
-                    Free includes Mock Test. Upgrade only when you need higher limits.
-                  </div>
                 </div>
               )
             }
@@ -3129,13 +3139,13 @@ export default function Home() {
         <main className="min-w-0 h-full overflow-hidden">
           
           {!activeId ? (
-            <div className="h-full flex flex-col p-2 sm:p-3 lg:p-4">
+            <div className="h-full flex flex-col p-2 sm:p-3 lg:p-2">
               <div
                 className={cn(
-                  "flex-1 min-h-0 overflow-y-auto rounded-[28px] border px-4 py-6 sm:px-6 sm:py-8 transition-colors duration-300",
+                  "flex-1 min-h-0 overflow-y-auto rounded-[28px] border shadow-sm px-4 py-6 sm:px-6 sm:py-8 transition-colors duration-300",
                   theme === "dark"
-                    ? "bg-slate-900 border-slate-800"
-                    : "bg-white border-slate-200"
+                    ? "bg-slate-900 border-slate-500"
+                    : "bg-white border-slate-300"
                 )}
               >
                 <div className="mx-auto w-full max-w-4xl">
@@ -3293,14 +3303,14 @@ export default function Home() {
 
 
             /* Document Loaded - Show Tabs and Content */
-            <div className="h-full flex flex-col p-2 sm:p-3 lg:p-4">
+            <div className="h-full flex flex-col p-2 sm:p-3 lg:p-2">
               {/* Tabs */}
               <div className="mb-4 hidden md:block lg:hidden">
                 <div
                   className={cn(
                     "flex w-full overflow-x-auto gap-2 p-1.5 rounded-2xl border shadow-sm scrollbar-thin transition-colors duration-300",
                     theme === "dark"
-                      ? "bg-slate-900 border-slate-800"
+                      ? "bg-slate-900 border-slate-600"
                       : "bg-white border-slate-200"
                   )}
                 >
@@ -3332,8 +3342,8 @@ export default function Home() {
                 className={cn(
                   "flex-1 min-h-0 rounded-[28px] border shadow-sm overflow-hidden transition-colors duration-300",
                   theme === "dark"
-                    ? "bg-slate-900 border-slate-800"
-                    : "bg-white border-slate-200"
+                    ? "bg-slate-900 border-slate-500"
+                    : "bg-white border-slate-300"
                 )}
               >
                 {/* Chat Tab */}
@@ -3359,7 +3369,14 @@ export default function Home() {
                         <select
                           value={chatLanguage}
                           onChange={(e) => handleLanguageChange(e.target.value, "chat")}
-                          className="px-3 py-2 border-2 border-gray-200 rounded-xl text-sm focus:border-blue-500 outline-none"
+                          className={cn(
+                            "rounded-xl border-2 px-4 py-2 text-sm font-medium transition-colors",
+                            theme === "dark"
+                              ? "border-blue-500 bg-slate-700 text-slate-100 hover:bg-slate-700"
+                              : "border-blue-500 bg-slate-100 text-slate-700 hover:bg-slate-100"
+                          )}
+
+
                         >
                           <option value="english">English</option>
                           <option value="hindi">Hindi</option>
@@ -3370,13 +3387,21 @@ export default function Home() {
                           <option value="japanese">Japanese</option>
                           <option value="chinese">chinese</option>
                         </select>
-                    
+                  
+
                         <button
                           onClick={() => handleTranslate("chat")}
-                          className="px-3 py-2 border-2 border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all"
+                          className={cn(
+                            "rounded-xl border-2 px-4 py-2 text-sm font-medium transition-colors",
+                            theme === "dark"
+                              ? "border-blue-500 bg-slate-700 text-slate-100 hover:bg-slate-700"
+                              : "border-blue-500 bg-slate-100 text-slate-700 hover:bg-slate-100"
+                          )}
                         >
                           Translate
                         </button>
+
+
                       </div>
                     </div>
 
@@ -3493,7 +3518,7 @@ export default function Home() {
                       )}
                     >
 
-                      <div className="flex items-end gap-2">
+                      <div className="relative flex items-end">
                         <div className="flex-1 relative">
 
 
@@ -3514,7 +3539,7 @@ export default function Home() {
                             }}
                             placeholder="Ask anything about your document..."
                             className={cn(
-                              "w-full min-h-[64px] max-h-44 resize-none overflow-y-auto rounded-3xl border-none px-5 py-4 pr-14 text-[15px] outline-none ring-0 transition-all focus:outline-none focus:ring-0",
+                              "w-full min-h-[120px] max-h-44 resize-none overflow-y-auto rounded-3xl border-none px-5 py-4 pr-28 text-[15px] outline-none ring-0 transition-all focus:outline-none focus:ring-0",
                               theme === "dark"
                                 ? "bg-slate-800/90 !text-white caret-white placeholder:!text-slate-400"
                                 : "bg-slate-100 !text-slate-900 caret-slate-900 placeholder:!text-slate-500"
@@ -3522,11 +3547,10 @@ export default function Home() {
                             rows={1}
                           />
 
-
                           <button
                             onClick={handleVoiceInput}
                             className={cn(
-                              "absolute right-4 bottom-4 p-1.5 rounded-full transition-colors",
+                              "absolute right-16 bottom-4 p-1.5 rounded-full transition-colors",
                               isListening
                                 ? "bg-red-100 text-red-600"
                                 : "text-gray-400 hover:text-gray-600 hover:bg-gray-100"
@@ -3534,23 +3558,28 @@ export default function Home() {
                           >
                             <Mic className="w-5 h-5" />
                           </button>
+
+
                         </div>
+
                         {isStreaming ? (
                           <button
                             onClick={handleStopAnswer}
-                            className="h-12 w-12 rounded-full bg-red-500 text-white hover:bg-red-600 shadow-lg transition-all flex items-center justify-center"
+                            className="absolute right-4 bottom-4 h-10 w-10 rounded-full bg-red-500 text-white hover:bg-red-600 shadow-lg transition-all flex items-center justify-center"
                           >
-                            <X className="w-5 h-5" />
+                            <X className="w-4 h-4" />
                           </button>
                         ) : (
                           <button
                             onClick={() => handleAsk("chat")}
                             disabled={!question.trim() || isAsking}
-                            className="h-12 w-12 rounded-full bg-gradient-to-r from-blue-600 to-teal-600 text-white hover:from-blue-700 hover:to-teal-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-500/25 transition-all flex items-center justify-center"
+                            className="absolute right-4 bottom-4 h-10 w-10 rounded-full bg-gradient-to-r from-blue-600 to-teal-600 text-white hover:from-blue-700 hover:to-teal-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-500/25 transition-all flex items-center justify-center"
                           >
-                            <Send className="w-5 h-5" />
+                            <Send className="w-4 h-4" />
                           </button>
                         )}
+
+
                       </div>
                     </div>
                   </div>
