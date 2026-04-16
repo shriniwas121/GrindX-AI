@@ -2,9 +2,10 @@
 import { supabase } from "@/lib/supabase";
 import { useEffect, useState, useRef, useMemo } from "react";
 import ReactMarkdown from "react-markdown";
-import { LibraryPanel } from "@/components/workspace/LibraryPanel";
+import { WorkspaceShell } from "@/components/workspace/WorkspaceShell";
+import { LibrarySidebar } from "@/components/workspace/LibrarySidebar";
 import { StudySidePanel } from "@/components/workspace/StudySidePanel";
-import { WorkspaceLayout } from "@/components/workspace/WorkspaceLayout";
+import { MobileNav } from "@/components/workspace/MobileNav";
 import { StudyPanel } from "@/components/workspace/StudyPanel";
 import type { WorkspaceTabId } from "@/components/workspace/types";
 import {
@@ -2417,6 +2418,11 @@ export default function Home() {
     ? "study"
     : activeTab;
 
+  const closeStudyDrawer = () => {
+    setShowStudyDrawer(false);
+    setActiveTab("chat");
+  };
+
   const desktopStudyPanel = (
     <StudySidePanel
       theme={theme}
@@ -2936,24 +2942,23 @@ export default function Home() {
         </div>
       </header>
 
-      <WorkspaceLayout
+      <WorkspaceShell
         theme={theme}
-        activeTab={activeMobileTab}
-        showStudyToolsButton={Boolean(activeId)}
-        showLibraryDrawer={showSidebar}
-        onToggleLibraryDrawer={() => setShowSidebar((prev) => !prev)}
-        showStudyDrawer={showStudyDrawer}
-        onToggleStudyDrawer={() => setShowStudyDrawer((prev) => !prev)}
-        onSelectTab={handleMobileTabSelect}
+        showSidebar={showSidebar}
+        isSidebarCollapsed={isSidebarCollapsed}
+        isStudyCollapsed={isStudyCollapsed}
+        isStudyExpanded={isStudyExpanded}
+        onSidebarOverlayClick={() => setShowSidebar(false)}
+        showRightPanel={true}
         sidebar={
-          <LibraryPanel
+          <LibrarySidebar
             theme={theme}
             library={library}
             activeId={activeId}
             isCollapsed={isSidebarCollapsed}
             onToggleCollapsed={() => setIsSidebarCollapsed((prev) => !prev)}
             showCloseButton
-            onCloseSidebar={() => hideMobileDrawers()}
+            onCloseSidebar={() => setShowSidebar(false)}
             onStartNewDocument={startNewChat}
             onSelectItem={(id) => {
               const selectedItem = library.find((item) => item.id === id);
@@ -3118,17 +3123,7 @@ export default function Home() {
             }
           />
         }
-        rightPanel={
-          <div className={activeTab === "chat" ? "hidden h-full lg:block" : "h-full"}>
-            <StudyPanel
-              theme={theme}
-              onClose={() => setShowStudyDrawer(false)}
-              title="Study Workspace"
-            >
-              {desktopStudyPanel}
-            </StudyPanel>
-          </div>
-        }
+        rightPanel={desktopStudyPanel}
       >
         {/* Main Content */}
         <main className="min-w-0 h-full overflow-hidden">
@@ -3300,7 +3295,7 @@ export default function Home() {
             /* Document Loaded - Show Tabs and Content */
             <div className="h-full flex flex-col p-2 sm:p-3 lg:p-4">
               {/* Tabs */}
-              <div className="mb-4 lg:hidden">
+              <div className="mb-4 hidden md:block lg:hidden">
                 <div
                   className={cn(
                     "flex w-full overflow-x-auto gap-2 p-1.5 rounded-2xl border shadow-sm scrollbar-thin transition-colors duration-300",
@@ -3346,7 +3341,7 @@ export default function Home() {
                   <div
                     className={cn(
                       "h-full min-h-0 flex-col bg-white",
-                      activeTab === "chat" ? "flex" : "hidden lg:flex"
+                      activeTab === "chat" || showStudyDrawer ? "flex" : "hidden md:flex lg:flex"
                     )}
                   >
 
@@ -3570,7 +3565,7 @@ export default function Home() {
 
                   <div
                     className={cn(
-                      "flex h-full min-h-0 flex-col lg:hidden",
+                      "hidden h-full min-h-0 flex-col md:flex lg:hidden",
                       theme === "dark" ? "bg-slate-900" : "bg-white"
                     )}
                   >
@@ -3691,7 +3686,7 @@ export default function Home() {
 
                   <div
                     className={cn(
-                      "flex h-full min-h-0 flex-col lg:hidden",
+                      "hidden h-full min-h-0 flex-col md:flex lg:hidden",
                       theme === "dark" ? "bg-slate-900" : "bg-white"
                     )}
                   >
@@ -3806,7 +3801,7 @@ export default function Home() {
                 {activeTab === "practice" && (
                   <div
                     className={cn(
-                      "flex h-full min-h-0 flex-col lg:hidden",
+                      "hidden h-full min-h-0 flex-col md:flex lg:hidden",
                       theme === "dark" ? "bg-slate-900" : "bg-white"
                     )}
                   >
@@ -3924,7 +3919,7 @@ export default function Home() {
 
                   <div
                     className={cn(
-                      "h-full min-h-0 overflow-y-auto px-4 py-3 sm:px-5 sm:py-4 lg:hidden",
+                      "hidden h-full min-h-0 overflow-y-auto px-4 py-3 sm:px-5 sm:py-4 md:block lg:hidden",
                       theme === "dark" ? "bg-slate-900" : "bg-white"
                     )}
                   >
@@ -4227,7 +4222,31 @@ export default function Home() {
             </div>
           )}
         </main>
-      </WorkspaceLayout>
+      </WorkspaceShell>
+
+      <div className="lg:hidden">
+        <MobileNav theme={theme} active={activeMobileTab} onSelect={handleMobileTabSelect} />
+
+        {showStudyDrawer && (
+          <div className="fixed inset-0 z-50">
+            <button
+              className="absolute inset-0 bg-black/40"
+              aria-label="Close study drawer"
+              onClick={closeStudyDrawer}
+            />
+            <div
+              className={cn(
+                "absolute inset-x-0 bottom-0 max-h-[86vh] rounded-t-2xl shadow-xl",
+                theme === "dark" ? "bg-slate-950" : "bg-white"
+              )}
+            >
+              <StudyPanel theme={theme} onClose={closeStudyDrawer} title="Study Workspace">
+                {desktopStudyPanel}
+              </StudyPanel>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Hidden File Input */}
       <input
