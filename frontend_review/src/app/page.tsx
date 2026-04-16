@@ -2,6 +2,8 @@
 import { supabase } from "@/lib/supabase";
 import { useEffect, useState, useRef, useMemo } from "react";
 import ReactMarkdown from "react-markdown";
+import { WorkspaceShell } from "@/components/workspace/WorkspaceShell";
+import { LibrarySidebar } from "@/components/workspace/LibrarySidebar";
 import { LibraryPanel } from "@/components/workspace/LibraryPanel";
 import { StudySidePanel } from "@/components/workspace/StudySidePanel";
 import { WorkspaceLayout } from "@/components/workspace/WorkspaceLayout";
@@ -2936,24 +2938,23 @@ export default function Home() {
         </div>
       </header>
 
-      <WorkspaceLayout
+      <WorkspaceShell
         theme={theme}
-        activeTab={activeMobileTab}
-        showStudyToolsButton={Boolean(activeId)}
-        showLibraryDrawer={showSidebar}
-        onToggleLibraryDrawer={() => setShowSidebar((prev) => !prev)}
-        showStudyDrawer={showStudyDrawer}
-        onToggleStudyDrawer={() => setShowStudyDrawer((prev) => !prev)}
-        onSelectTab={handleMobileTabSelect}
+        showSidebar={showSidebar}
+        isSidebarCollapsed={isSidebarCollapsed}
+        isStudyCollapsed={isStudyCollapsed}
+        isStudyExpanded={isStudyExpanded}
+        onSidebarOverlayClick={() => setShowSidebar(false)}
+        showRightPanel={true}
         sidebar={
-          <LibraryPanel
+          <LibrarySidebar
             theme={theme}
             library={library}
             activeId={activeId}
             isCollapsed={isSidebarCollapsed}
             onToggleCollapsed={() => setIsSidebarCollapsed((prev) => !prev)}
             showCloseButton
-            onCloseSidebar={() => hideMobileDrawers()}
+            onCloseSidebar={() => setShowSidebar(false)}
             onStartNewDocument={startNewChat}
             onSelectItem={(id) => {
               const selectedItem = library.find((item) => item.id === id);
@@ -3118,17 +3119,7 @@ export default function Home() {
             }
           />
         }
-        rightPanel={
-          <div className={activeTab === "chat" ? "hidden h-full lg:block" : "h-full"}>
-            <StudyPanel
-              theme={theme}
-              onClose={() => setShowStudyDrawer(false)}
-              title="Study Workspace"
-            >
-              {desktopStudyPanel}
-            </StudyPanel>
-          </div>
-        }
+        rightPanel={desktopStudyPanel}
       >
         {/* Main Content */}
         <main className="min-w-0 h-full overflow-hidden">
@@ -4227,7 +4218,7 @@ export default function Home() {
             </div>
           )}
         </main>
-      </WorkspaceLayout>
+      </WorkspaceShell>
 
       {/* Hidden File Input */}
       <input
