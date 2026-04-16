@@ -2,9 +2,11 @@
 import { supabase } from "@/lib/supabase";
 import { useEffect, useState, useRef, useMemo } from "react";
 import ReactMarkdown from "react-markdown";
-import { WorkspaceShell } from "@/components/workspace/WorkspaceShell";
-import { LibrarySidebar } from "@/components/workspace/LibrarySidebar";
+import { LibraryPanel } from "@/components/workspace/LibraryPanel";
 import { StudySidePanel } from "@/components/workspace/StudySidePanel";
+import { WorkspaceLayout } from "@/components/workspace/WorkspaceLayout";
+import { StudyPanel } from "@/components/workspace/StudyPanel";
+import type { WorkspaceTabId } from "@/components/workspace/types";
 import {
   BookOpen,
   Upload,
@@ -119,6 +121,8 @@ export default function Home() {
   const API = process.env.NEXT_PUBLIC_API_URL;
 
   const [activeTab, setActiveTab] = useState<"chat" | "summary" | "concepts" | "practice" | "mock">("chat");
+  const [lastStudyTab, setLastStudyTab] = useState<Exclude<WorkspaceTabId, "chat" | "library" | "study">>("summary");
+  const [showStudyDrawer, setShowStudyDrawer] = useState(false);
   const [tabContent, setTabContent] = useState("");
   const [isTabLoading, setIsTabLoading] = useState(false);
   const [tabAudio, setTabAudio] = useState<HTMLAudioElement | null>(null);
@@ -2373,6 +2377,46 @@ export default function Home() {
     { id: "mock" as const, label: "Mock Test", icon: Award },
   ];
 
+  const hideMobileDrawers = () => {
+    setShowSidebar(false);
+    setShowStudyDrawer(false);
+  };
+
+  const handleMobileTabSelect = (tab: WorkspaceTabId) => {
+    if (tab === "chat") {
+      setActiveTab("chat");
+      hideMobileDrawers();
+      return;
+    }
+
+    if (tab === "library") {
+      setShowStudyDrawer(false);
+      setShowSidebar(true);
+      return;
+    }
+
+    if (tab === "study") {
+      const fallback = activeTab === "chat" ? lastStudyTab : (activeTab as Exclude<WorkspaceTabId, "chat" | "library" | "study">);
+      setActiveTab(fallback);
+      setLastStudyTab(fallback);
+      setShowSidebar(false);
+      setShowStudyDrawer(true);
+      return;
+    }
+
+    setActiveTab(tab);
+    setLastStudyTab(tab);
+    setShowSidebar(false);
+    setShowStudyDrawer(true);
+  };
+
+  const activeStudyTab = activeTab === "chat" ? lastStudyTab : activeTab;
+  const activeMobileTab: WorkspaceTabId = showSidebar
+    ? "library"
+    : showStudyDrawer
+    ? "study"
+    : activeTab;
+
   const desktopStudyPanel = (
     <StudySidePanel
       theme={theme}
@@ -2892,23 +2936,24 @@ export default function Home() {
         </div>
       </header>
 
-      <WorkspaceShell
+      <WorkspaceLayout
         theme={theme}
-        showSidebar={showSidebar}
-        isSidebarCollapsed={isSidebarCollapsed}
-        isStudyCollapsed={isStudyCollapsed}
-        isStudyExpanded={isStudyExpanded}
-        onSidebarOverlayClick={() => setShowSidebar(false)}
-        showRightPanel={true}
+        activeTab={activeMobileTab}
+        showStudyToolsButton={Boolean(activeId)}
+        showLibraryDrawer={showSidebar}
+        onToggleLibraryDrawer={() => setShowSidebar((prev) => !prev)}
+        showStudyDrawer={showStudyDrawer}
+        onToggleStudyDrawer={() => setShowStudyDrawer((prev) => !prev)}
+        onSelectTab={handleMobileTabSelect}
         sidebar={
-          <LibrarySidebar
+          <LibraryPanel
             theme={theme}
             library={library}
             activeId={activeId}
             isCollapsed={isSidebarCollapsed}
             onToggleCollapsed={() => setIsSidebarCollapsed((prev) => !prev)}
             showCloseButton
-            onCloseSidebar={() => setShowSidebar(false)}
+            onCloseSidebar={() => hideMobileDrawers()}
             onStartNewDocument={startNewChat}
             onSelectItem={(id) => {
               const selectedItem = library.find((item) => item.id === id);
@@ -3073,7 +3118,17 @@ export default function Home() {
             }
           />
         }
-        rightPanel={desktopStudyPanel}
+        rightPanel={
+          <div className={activeTab === "chat" ? "hidden h-full lg:block" : "h-full"}>
+            <StudyPanel
+              theme={theme}
+              onClose={() => setShowStudyDrawer(false)}
+              title="Study Workspace"
+            >
+              {desktopStudyPanel}
+            </StudyPanel>
+          </div>
+        }
       >
         {/* Main Content */}
         <main className="min-w-0 h-full overflow-hidden">
@@ -4172,7 +4227,7 @@ export default function Home() {
             </div>
           )}
         </main>
-      </WorkspaceShell>
+      </WorkspaceLayout>
 
       {/* Hidden File Input */}
       <input
