@@ -3513,7 +3513,7 @@ export default function Home() {
 
                     <div
                       className={cn(
-                        "fixed inset-x-0 bottom-[72px] z-30 px-4 pt-3 pb-3 border-t shadow-[0_-8px_24px_rgba(0,0,0,0.18)] sm:px-5 lg:static lg:inset-auto lg:bottom-auto lg:z-auto lg:px-4 lg:pt-3 lg:pb-3 lg:border-t-0 lg:shadow-none",
+                        "fixed inset-x-0 bottom-[72px] z-30 px-4 pt-3 pb-3 sm:px-5 lg:static lg:inset-auto lg:bottom-auto lg:z-auto lg:px-4 lg:pt-3 lg:pb-3",
                         theme === "dark"
                           ? "bg-slate-900 border-slate-700"
                           : "bg-white border-slate-200"
