@@ -113,7 +113,7 @@ export function LibrarySidebar({
   }
 
   return (
-    <div className="flex h-full flex-col rounded-[28px] border shadow-sm overflow-hidden">
+    <div className="flex h-full min-h-0 flex-col rounded-[28px] border shadow-sm overflow-hidden">
       <div className="p-4 space-y-2">
         <button
           onClick={onToggleCollapsed}
@@ -163,7 +163,7 @@ export function LibrarySidebar({
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 pb-4">
+      <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-2">
         {library.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <div
@@ -265,10 +265,11 @@ export function LibrarySidebar({
       </div>
 
       {bottomContent && (
+
         <div
           className={cn(
-            "px-3 py-3",
-            theme === "dark" ? "bg-slate-950" : "bg-white"
+            "px-3 py-2 border-t shrink-0",
+            theme === "dark" ? "bg-slate-950 border-slate-800" : "bg-white border-slate-200"
           )}
         >
           {bottomContent}

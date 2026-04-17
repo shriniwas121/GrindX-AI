@@ -2514,8 +2514,8 @@ export default function Home() {
 
       {/* Plans Modal */}
       {showPlansModal && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-          <div className="relative w-full max-w-5xl rounded-3xl bg-white shadow-2xl overflow-hidden">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-3 backdrop-blur-sm overflow-hidden">
+          <div className="relative w-full max-w-5xl max-h-[88dvh] rounded-3xl bg-white shadow-2xl overflow-hidden flex flex-col">
 
             <button
               onClick={() => setShowPlansModal(false)}
@@ -2540,7 +2540,7 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="grid gap-5 p-6 md:grid-cols-3 md:p-8">
+            <div className="flex-1 overflow-y-auto grid gap-5 p-4 md:grid-cols-3 md:p-8">
               {/* Free */}
               <div className="flex flex-col rounded-2xl border border-slate-200 bg-slate-50/70 p-5">
                 <div className="mb-4">
