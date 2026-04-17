@@ -3559,10 +3559,10 @@ export default function Home() {
                             }}
                             placeholder="Ask anything about your document..."
                             className={cn(
-                              "w-full min-h-[120px] max-h-44 resize-none overflow-y-auto rounded-3xl border-none px-5 py-4 pr-28 text-[15px] outline-none ring-0 transition-all focus:outline-none focus:ring-0",
+                              "w-full min-h-[120px] max-h-44 resize-none overflow-y-auto rounded-3xl border px-5 py-4 pr-28 text-[15px] outline-none ring-0 transition-all focus:outline-none focus:ring-0",
                               theme === "dark"
-                                ? "bg-slate-800/90 !text-white caret-white placeholder:!text-slate-400"
-                                : "bg-slate-100 !text-slate-900 caret-slate-900 placeholder:!text-slate-500"
+                                ? "border-slate-600 bg-slate-800/90 !text-white caret-white placeholder:!text-slate-400"
+                                : "border-slate-300 bg-slate-100 !text-slate-900 caret-slate-900 placeholder:!text-slate-500"
                             )}
                             rows={1}
                           />
@@ -4286,7 +4286,7 @@ export default function Home() {
             />
             <div
               className={cn(
-                "absolute inset-x-0 bottom-0 h-[calc(100dvh-6.5rem)] max-h-[calc(100dvh-6.5rem)] rounded-t-2xl shadow-xl overflow-hidden",
+                "absolute inset-x-0 bottom-0 h-[calc(100dvh-5.5rem)] max-h-[calc(100dvh-5.5rem)] rounded-t-2xl shadow-xl overflow-hidden",
                 theme === "dark" ? "bg-slate-950" : "bg-white"
               )}
             >
