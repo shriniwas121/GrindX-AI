@@ -114,7 +114,7 @@ export function LibrarySidebar({
 
   return (
     <div className="flex h-full min-h-0 flex-col rounded-[28px] border shadow-sm overflow-hidden">
-      <div className="p-4 space-y-2">
+      <div className="p-3 lg:p-4 space-y-2">
         <button
           onClick={onToggleCollapsed}
           className={cn(
@@ -138,7 +138,7 @@ export function LibrarySidebar({
 
       <div
         className={cn(
-          "flex items-center justify-between px-4 py-4 border-b transition-colors duration-300",
+          "flex items-center justify-between px-4 py-3 lg:py-4 border-b transition-colors duration-300",
           theme === "dark" ? "border-slate-800" : "border-gray-100"
         )}
       >
@@ -185,7 +185,7 @@ export function LibrarySidebar({
               <div
                 key={item.id}
                 className={cn(
-                  "group relative p-3 rounded-xl cursor-pointer transition-all duration-200",
+                  "group relative p-2.5 lg:p-3 rounded-xl cursor-pointer transition-all duration-200",
                   activeId === item.id
                     ? theme === "dark"
                       ? "bg-slate-800 border-2 border-blue-500/50 shadow-sm"
