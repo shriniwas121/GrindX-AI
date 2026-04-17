@@ -3411,7 +3411,7 @@ export default function Home() {
 
                     <div
                       className={cn(
-                        "flex-1 min-h-0 overflow-y-auto px-4 pt-4 pb-4 sm:px-5 sm:pt-5 lg:pb-4 space-y-5",
+                        "flex-1 min-h-0 overflow-y-auto px-4 pt-4 pb-[220px] sm:px-5 sm:pt-5 lg:pb-4 space-y-5",
                         theme === "dark" ? "bg-slate-900" : "bg-white"
                       )}
                     >
@@ -3513,7 +3513,7 @@ export default function Home() {
 
                     <div
                       className={cn(
-                        "shrink-0 px-4 pt-3 pb-[84px] sm:px-5 lg:pb-3",
+                        "fixed inset-x-0 bottom-[72px] z-30 px-4 pt-3 pb-3 sm:px-5 lg:static lg:inset-auto lg:bottom-auto lg:z-auto lg:px-4 lg:pt-3 lg:pb-3",
                         theme === "dark"
                           ? "bg-slate-900"
                           : "bg-white"
