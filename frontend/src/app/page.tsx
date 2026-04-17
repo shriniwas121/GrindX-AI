@@ -3348,10 +3348,12 @@ export default function Home() {
               >
                 {/* Chat Tab */}
                 {(activeId || activeTab === "chat") && (
+
                   <div
                     className={cn(
-                      "h-full min-h-0 flex-col bg-white",
-                      activeTab === "chat" || showStudyDrawer ? "flex" : "hidden md:flex lg:flex"
+                      "relative h-full min-h-0 flex-col overflow-hidden",
+                      activeTab === "chat" || showStudyDrawer ? "flex" : "hidden md:flex lg:flex",
+                      theme === "dark" ? "bg-slate-900" : "bg-white"
                     )}
                   >
 
@@ -3409,7 +3411,7 @@ export default function Home() {
 
                     <div
                       className={cn(
-                        "flex-1 min-h-0 overflow-y-auto px-4 pt-4 pb-4 sm:px-5 sm:py-5 space-y-5 lg:pb-4",
+                        "flex-1 min-h-0 overflow-y-auto px-4 pt-4 pb-40 sm:px-5 sm:pb-32 sm:pt-5 lg:pb-28 space-y-5",
                         theme === "dark" ? "bg-slate-900" : "bg-white"
                       )}
                     >
@@ -3511,7 +3513,7 @@ export default function Home() {
 
                     <div
                       className={cn(
-                        "sticky bottom-[72px] z-20 px-4 pt-3 pb-3 sm:px-5 sm:pb-5 lg:bottom-0 lg:pb-3",
+                        "absolute inset-x-0 bottom-[72px] z-20 px-4 pt-3 pb-3 sm:px-5 sm:bottom-0 sm:pb-5 lg:pb-3",
                         theme === "dark"
                           ? "bg-slate-900"
                           : "bg-white"
