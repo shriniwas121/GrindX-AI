@@ -488,7 +488,7 @@ export function StudySidePanel({
                 <button
                   onClick={onTranslate}
                   className={cn(
-                    "flex h-[44px] w-[118px] items-center justify-center rounded-xl border-2 px-0 text-sm font-medium transition-colors shrink-0",
+                    "flex h-[20px] w-[118px] items-center justify-center rounded-xl border-2 px-0 text-sm font-medium transition-colors shrink-0",
                     theme === "dark"
                       ? "border-blue-500 bg-slate-700 text-slate-100 hover:bg-slate-700"
                       : "border-blue-500 bg-slate-100 text-slate-700 hover:bg-slate-100"
