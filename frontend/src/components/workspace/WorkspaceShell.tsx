@@ -66,7 +66,7 @@ export function WorkspaceShell({
         >
           <aside
             className={cn(
-              "fixed top-16 left-0 z-50 h-[calc(100vh-4rem)] w-[88vw] max-w-72 transform transition-all duration-300 ease-in-out sm:w-72 lg:static lg:z-10 lg:h-full lg:w-auto lg:max-w-none lg:translate-x-0 lg:p-2",
+              "fixed top-3 left-0 z-50 h-[calc(100dvh-5.5rem)] max-h-[calc(100dvh-5.5rem)] w-[88vw] max-w-72 transform transition-all duration-300 ease-in-out sm:w-72 lg:static lg:z-10 lg:h-full lg:w-auto lg:max-w-none lg:translate-x-0 lg:p-2",
               theme === "dark"
                 ? "bg-slate-950 lg:bg-transparent"
                 : "bg-white lg:bg-transparent",
@@ -140,7 +140,7 @@ export function WorkspaceShell({
       >
         <aside
           className={cn(
-            "fixed top-16 left-0 z-50 h-[calc(100vh-4rem)] w-[88vw] max-w-72 transform transition-all duration-300 ease-in-out sm:w-72 lg:static lg:z-10 lg:h-full lg:w-auto lg:max-w-none lg:translate-x-0 lg:p-2",
+            "fixed top-3 left-0 z-50 h-[calc(100dvh-5.5rem)] max-h-[calc(100dvh-5.5rem)] w-[88vw] max-w-72 transform transition-all duration-300 ease-in-out sm:w-72 lg:static lg:z-10 lg:h-full lg:w-auto lg:max-w-none lg:translate-x-0 lg:p-2",
             theme === "dark"
               ? "bg-slate-950 lg:bg-transparent"
               : "bg-white lg:bg-transparent",
