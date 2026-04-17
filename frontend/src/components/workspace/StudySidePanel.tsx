@@ -163,7 +163,8 @@ export function StudySidePanel({
               Summary, concepts, practice, and mock tools in one panel.
             </p>
           </div>
-          <div className="flex items-center gap-2">
+
+          <div className="hidden lg:flex items-center gap-2">
             {onToggleCollapsed && (
               <button
                 onClick={onToggleCollapsed}
@@ -185,6 +186,8 @@ export function StudySidePanel({
               </button>
             )}
           </div>
+
+
         </div>
       </div>
 
@@ -458,6 +461,7 @@ export function StudySidePanel({
               )}
             >
               <div className="flex items-center gap-2">
+
                 <select
                   value={chatLanguage}
                   onChange={(e) => onLanguageChange(e.target.value)}
@@ -467,8 +471,9 @@ export function StudySidePanel({
                       ? "border-blue-500 bg-slate-700 text-slate-100 hover:bg-slate-700"
                       : "border-blue-500 bg-slate-100 text-slate-700 hover:bg-slate-100"
                   )}
-
                 >
+
+
                   <option value="english">English</option>
                   <option value="hindi">Hindi</option>
                   <option value="french">French</option>
@@ -479,10 +484,11 @@ export function StudySidePanel({
                   <option value="chinese">chinese</option>
                 </select>
 
+
                 <button
                   onClick={onTranslate}
                   className={cn(
-                    "rounded-xl border-2 px-4 py-2 text-sm font-medium transition-colors",
+                    "rounded-xl border-2 px-4 py-2 text-sm font-medium transition-colors h-[52px] min-w-[140px]",
                     theme === "dark"
                       ? "border-blue-500 bg-slate-700 text-slate-100 hover:bg-slate-700"
                       : "border-blue-500 bg-slate-100 text-slate-700 hover:bg-slate-100"
@@ -490,7 +496,6 @@ export function StudySidePanel({
                 >
                   Translate
                 </button>
-
 
               </div>
               <div className="flex flex-col items-end gap-1">
