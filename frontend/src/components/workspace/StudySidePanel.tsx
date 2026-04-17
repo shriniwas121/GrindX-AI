@@ -488,7 +488,7 @@ export function StudySidePanel({
                 <button
                   onClick={onTranslate}
                   className={cn(
-                    "rounded-xl border-2 px-4 py-2 text-sm font-medium transition-colors h-[52px] min-w-[140px]",
+                    "rounded-xl border-2 px-4 py-2 text-sm font-medium transition-colors",
                     theme === "dark"
                       ? "border-blue-500 bg-slate-700 text-slate-100 hover:bg-slate-700"
                       : "border-blue-500 bg-slate-100 text-slate-700 hover:bg-slate-100"
