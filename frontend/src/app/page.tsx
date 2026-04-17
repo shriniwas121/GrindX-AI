@@ -3167,7 +3167,8 @@ export default function Home() {
                 )}
               >
                 <div className="mx-auto w-full max-w-2xl">
-                  <div className="mb-4 inline-flex rounded-2xl bg-gradient-to-br from-slate-800 to-slate-900 p-3 shadow-lg">
+
+                  <div className="mb-4 inline-flex rounded-2xl p-0">
                     <div className="rounded-xl bg-gradient-to-br from-blue-600 to-teal-500 p-2.5">
                       <Sparkles className="h-7 w-7 text-white" />
                     </div>
@@ -3185,7 +3186,7 @@ export default function Home() {
 
                   <p
                     className={cn(
-                      "mt-4 xl:mt-6 text-2xl xl:text-4xl font-bold leading-tight",
+                      "mt-4 xl:mt-4 text-2xl xl:text-4xl font-bold leading-tight",
                       theme === "dark" ? "text-slate-100" : "text-slate-900"
                     )}
                   >
@@ -3194,16 +3195,16 @@ export default function Home() {
 
                   <p
                     className={cn(
-                      "mt-1 max-w-1xl text-lg xl:text-1xl leading-relaxed",
+                      "hidden md:block mt-2 max-w-1xl text-sm:text-2xl leading-relaxed",
                       theme === "dark" ? "text-slate-300" : "text-slate-600"
                     )}
                   >
-                    Upload notes, screenshots, or snap a photo — then chat with them naturally. Get summaries, practice questions, and full mock exams.
+                    Upload your study material. Chat, summarize, practice, and test yourself.
                   </p>
 
                   <div
                     className={cn(
-                      "mt-2 rounded-3xl border-2 border-dashed p-2",
+                      "mt-5 rounded-3xl border-2 border-dashed p-2",
                       theme === "dark"
                         ? "border-slate-700 bg-slate-900/70"
                         : "border-slate-300 bg-slate-50"
