@@ -3511,7 +3511,7 @@ export default function Home() {
 
                     <div
                       className={cn(
-                        "px-4 py-3 sm:px-5",
+                        "px-4 pt-3 pb-24 sm:px-5 sm:pb-5 lg:pb-3",
                         theme === "dark"
                           ? "bg-slate-900"
                           : "bg-white"
