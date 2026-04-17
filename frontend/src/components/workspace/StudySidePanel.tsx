@@ -412,7 +412,13 @@ export function StudySidePanel({
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between gap-2">
+
+                <div
+                  className={cn(
+                    "sticky bottom-0 z-10 flex items-center justify-between gap-2 pt-3 pb-3",
+                    theme === "dark" ? "bg-slate-950" : "bg-slate-50"
+                  )}
+                >
                   <button
                     onClick={() => onCurrentQChange(Math.max(0, currentQ - 1))}
                     disabled={currentQ === 0}
@@ -439,6 +445,7 @@ export function StudySidePanel({
                     </button>
                   )}
                 </div>
+
               </div>
             )}
           </div>

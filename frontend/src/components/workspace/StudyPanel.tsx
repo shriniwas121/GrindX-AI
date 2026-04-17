@@ -17,7 +17,7 @@ export function StudyPanel({ theme, onClose, title = "Study Tools", children }: 
   return (
     <div
       className={cn(
-        "flex h-full min-h-0 flex-col overflow-hidden",
+        "flex h-full min-h-0 flex-col overflow-hidden overscroll-contain",
         theme === "dark" ? "bg-slate-950" : "bg-white"
       )}
     >

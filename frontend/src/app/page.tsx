@@ -504,6 +504,24 @@ export default function Home() {
 
 
   useEffect(() => {
+    if (!showStudyDrawer) {
+      document.body.style.overflow = "";
+      document.documentElement.style.overflow = "";
+      return;
+    }
+  
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+  
+    return () => {
+      document.body.style.overflow = "";
+      document.documentElement.style.overflow = "";
+    };
+  }, [showStudyDrawer]);
+
+
+
+  useEffect(() => {
     let mounted = true;
   
     const loadSession = async () => {
@@ -4258,8 +4276,9 @@ export default function Home() {
       <div className="lg:hidden">
         <MobileNav theme={theme} active={activeMobileTab} onSelect={handleMobileTabSelect} />
 
+
         {showStudyDrawer && (
-          <div className="fixed inset-0 z-50">
+          <div className="fixed inset-0 z-50 overflow-hidden">
             <button
               className="absolute inset-0 bg-black/40"
               aria-label="Close study drawer"
@@ -4267,7 +4286,7 @@ export default function Home() {
             />
             <div
               className={cn(
-                "absolute inset-x-0 bottom-0 max-h-[86vh] rounded-t-2xl shadow-xl",
+                "absolute inset-x-0 bottom-0 h-[calc(100dvh-6.5rem)] max-h-[calc(100dvh-6.5rem)] rounded-t-2xl shadow-xl overflow-hidden",
                 theme === "dark" ? "bg-slate-950" : "bg-white"
               )}
             >
@@ -4277,7 +4296,7 @@ export default function Home() {
             </div>
           </div>
         )}
-      </div>
+
 
       {/* Hidden File Input */}
       <input
