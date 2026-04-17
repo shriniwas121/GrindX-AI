@@ -4286,7 +4286,7 @@ export default function Home() {
             />
             <div
               className={cn(
-                "absolute inset-x-0 bottom-0 h-[calc(100dvh-5.5rem)] max-h-[calc(100dvh-5.5rem)] rounded-t-2xl shadow-xl overflow-hidden",
+                "absolute inset-x-0 bottom-0 h-[calc(100dvh-5.0rem)] max-h-[calc(100dvh-5.5rem)] rounded-t-2xl shadow-xl overflow-hidden",
                 theme === "dark" ? "bg-slate-950" : "bg-white"
               )}
             >
