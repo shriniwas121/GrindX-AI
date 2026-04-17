@@ -3390,7 +3390,7 @@ export default function Home() {
                           value={chatLanguage}
                           onChange={(e) => handleLanguageChange(e.target.value, "chat")}
                           className={cn(
-                            "rounded-xl border-2 px-4 py-2 text-sm font-medium transition-colors",
+                            "flex h-[35px] w-[100px] items-center justify-center rounded-xl border-2 px-0 text-sm font-medium transition-colors shrink-0",
                             theme === "dark"
                               ? "border-blue-500 bg-slate-700 text-slate-100 hover:bg-slate-700"
                               : "border-blue-500 bg-slate-100 text-slate-700 hover:bg-slate-100"
@@ -3412,7 +3412,7 @@ export default function Home() {
                         <button
                           onClick={() => handleTranslate("chat")}
                           className={cn(
-                            "rounded-xl border-2 px-4 py-2 text-sm font-medium transition-colors",
+                            "flex h-[35px] w-[100px] items-center justify-center rounded-xl border-2 px-0 text-sm font-medium transition-colors shrink-0",
                             theme === "dark"
                               ? "border-blue-500 bg-slate-700 text-slate-100 hover:bg-slate-700"
                               : "border-blue-500 bg-slate-100 text-slate-700 hover:bg-slate-100"
