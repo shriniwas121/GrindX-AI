@@ -2879,7 +2879,7 @@ export default function Home() {
                 onClick={() => setShowSidebar(true)}
                 className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-colors lg:hidden"
               >
-                <Menu className="w-6 h-6" />
+                <Menu className="w-4 h-4" />
               </button>
               <div className="flex items-center gap-2.5">
                 <div className="p-2 bg-gradient-to-br from-blue-600 to-teal-500 rounded-xl shadow-lg shadow-blue-500/25">
@@ -3139,16 +3139,16 @@ export default function Home() {
         <main className="min-w-0 h-full overflow-hidden">
           
           {!activeId ? (
-            <div className="h-full flex flex-col p-2 sm:p-3 lg:p-2">
+            <div className="h-full flex flex-col p-2 sm:p-3 lg:p-1">
               <div
                 className={cn(
-                  "flex-1 min-h-0 overflow-y-auto rounded-[28px] border shadow-sm px-4 py-6 sm:px-6 sm:py-8 transition-colors duration-300",
+                  "flex-1 min-h-0 overflow-y-auto rounded-[28px] border shadow-sm px-4 py-5 sm:px-6 sm:py-6 transition-colors duration-300",
                   theme === "dark"
                     ? "bg-slate-900 border-slate-500"
                     : "bg-white border-slate-300"
                 )}
               >
-                <div className="mx-auto w-full max-w-4xl">
+                <div className="mx-auto w-full max-w-2xl">
                   <div className="mb-4 inline-flex rounded-2xl bg-gradient-to-br from-slate-800 to-slate-900 p-3 shadow-lg">
                     <div className="rounded-xl bg-gradient-to-br from-blue-600 to-teal-500 p-2.5">
                       <Sparkles className="h-7 w-7 text-white" />
@@ -3157,7 +3157,7 @@ export default function Home() {
 
                   <h1
                     className={cn(
-                      "text-4xl font-bold leading-tight",
+                      "text-3xl xl:text-3xl font-bold leading-tight",
                       theme === "dark" ? "text-slate-100" : "text-slate-900"
                     )}
                   >
@@ -3167,7 +3167,7 @@ export default function Home() {
 
                   <p
                     className={cn(
-                      "mt-6 text-4xl font-bold leading-tight",
+                      "mt-4 xl:mt-6 text-2xl xl:text-4xl font-bold leading-tight",
                       theme === "dark" ? "text-slate-100" : "text-slate-900"
                     )}
                   >
@@ -3176,7 +3176,7 @@ export default function Home() {
 
                   <p
                     className={cn(
-                      "mt-2 max-w-3xl text-2xl leading-relaxed",
+                      "mt-1 max-w-1xl text-lg xl:text-1xl leading-relaxed",
                       theme === "dark" ? "text-slate-300" : "text-slate-600"
                     )}
                   >
@@ -3185,13 +3185,13 @@ export default function Home() {
 
                   <div
                     className={cn(
-                      "mt-8 rounded-3xl border-2 border-dashed p-4",
+                      "mt-2 rounded-3xl border-2 border-dashed p-2",
                       theme === "dark"
                         ? "border-slate-700 bg-slate-900/70"
                         : "border-slate-300 bg-slate-50"
                     )}
                   >
-                    <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                    <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                       <div className="flex items-center gap-3">
                         <div
                           className={cn(
@@ -3202,10 +3202,10 @@ export default function Home() {
                           <Upload className="h-6 w-6 text-blue-500" />
                         </div>
                         <div>
-                          <h3 className={cn("text-2xl font-semibold", theme === "dark" ? "text-slate-100" : "text-slate-900")}>
+                          <h3 className={cn("text-1xl font-semibold", theme === "dark" ? "text-slate-100" : "text-slate-900")}>
                             Upload your study material
                           </h3>
-                          <p className={cn("text-xl", theme === "dark" ? "text-slate-400" : "text-slate-600")}>
+                          <p className={cn("text-lg", theme === "dark" ? "text-slate-400" : "text-slate-600")}>
                             PDF, Word, Text, Images, or URL
                           </p>
                         </div>
@@ -3214,7 +3214,7 @@ export default function Home() {
                       <div className="flex items-center gap-3">
                         <button
                           onClick={handleUploadButtonClick}
-                          className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-teal-600 px-5 py-3 text-xl font-semibold text-white shadow-md"
+                          className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-teal-600 px-5 py-1.5 text-lg font-semibold text-white shadow-md"
                         >
                           <Upload className="h-5 w-5" />
                           Upload
@@ -3222,7 +3222,7 @@ export default function Home() {
 
                         <label
                           className={cn(
-                            "inline-flex cursor-pointer items-center gap-2 rounded-2xl border px-5 py-3 text-xl font-medium transition-colors",
+                            "inline-flex cursor-pointer items-center gap-2 rounded-2xl border px-5 py-1.5 text-lg font-medium transition-colors",
                             theme === "dark"
                               ? "border-slate-600 bg-slate-900 text-slate-100 hover:bg-slate-800"
                               : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
@@ -3242,7 +3242,7 @@ export default function Home() {
                     </div>
                   </div>
 
-                  <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+                  <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
                     <div className="relative flex-1">
                       <Link2 className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
                       <input
@@ -3269,13 +3269,13 @@ export default function Home() {
                       type="button"
                       onClick={() => handleUrlAnalyze(urlInput)}
                       disabled={!urlInput.trim()}
-                      className="rounded-2xl bg-teal-600 px-5 py-3 text-xl font-medium text-white transition-colors hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="rounded-2xl bg-teal-600 px-5 py-1.5 text-xl font-medium text-white transition-colors hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       Analyze
                     </button>
                   </div>
 
-                  <div className="mt-6 flex flex-wrap items-center gap-6">
+                  <div className="mt-2 flex flex-wrap items-center gap-4">
                     {[
                       { icon: Zap, label: "AI-Powered" },
                       { icon: TrendingUp, label: "Learn Faster" },
