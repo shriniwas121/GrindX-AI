@@ -3513,7 +3513,7 @@ export default function Home() {
 
                     <div
                       className={cn(
-                        "absolute inset-x-0 bottom-[72px] z-20 px-4 pt-3 pb-3 sm:px-5 sm:bottom-0 sm:pb-5 lg:pb-3",
+                        "absolute inset-x-0 bottom-[72px] z-20 px-4 pt-3 pb-3 sm:px-5 lg:bottom-0 lg:pb-3",
                         theme === "dark"
                           ? "bg-slate-900"
                           : "bg-white"
