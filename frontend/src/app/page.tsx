@@ -482,9 +482,11 @@ export default function Home() {
     }
   };
 
+
   const replaceChatHistoryInCloud = async (item: LibraryItem, history: ChatMessage[]) => {
- 
-    if (!user?.id || !documentId) return;
+    if (!user?.id || !item?.id) return;
+  
+    const documentId = item.id;
   
     const { error: deleteError } = await supabase
       .from("chat_messages")
@@ -497,9 +499,9 @@ export default function Home() {
       return;
     }
   
-    if (!chatHistory.length) return;
+    if (!history.length) return;
   
-    const rows: ChatMessageRow[] = chatHistory.map((msg, index) => ({
+    const rows: ChatMessageRow[] = history.map((msg, index) => ({
       document_id: documentId,
       user_id: user.id,
       role: msg.role,
@@ -517,7 +519,8 @@ export default function Home() {
       console.error("insert chat failed:", insertError);
     }
   };
-  
+
+
   const saveLibraryItemToCloud = async (item: LibraryItem) => {
     await upsertDocumentToCloud(item);
     await replaceChatHistoryInCloud(item.id, item.chatHistory || []);
