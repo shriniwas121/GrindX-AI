@@ -643,7 +643,6 @@ export default function Home() {
 
 
 
-
   useEffect(() => {
     if (!user?.id) return;
   
@@ -655,9 +654,11 @@ export default function Home() {
   
       if (!billing) return;
   
-      if (billing === "cancel") {
+      if (billing === "cancel" || billing === "cancelled") {
         await fetchProfile(user.id);
-        window.history.replaceState({}, "", window.location.pathname);
+        if (!cancelled) {
+          window.history.replaceState({}, "", window.location.pathname);
+        }
         return;
       }
   
@@ -668,8 +669,14 @@ export default function Home() {
         while (!cancelled && attempts < maxAttempts) {
           const latestProfile = await fetchProfile(user.id);
           const latestTier = (latestProfile?.tier || "free").toLowerCase();
+          const latestStatus = (latestProfile?.subscription_status || "").toLowerCase();
   
-          if (latestTier === "premium" || latestTier === "pro") {
+          if (
+            latestTier === "premium" ||
+            latestTier === "pro" ||
+            latestStatus === "trialing" ||
+            latestStatus === "active"
+          ) {
             break;
           }
   
@@ -697,9 +704,6 @@ export default function Home() {
       window.removeEventListener("focus", onFocus);
     };
   }, [user?.id]);
-
-
-
 
 
 
