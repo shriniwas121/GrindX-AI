@@ -2754,6 +2754,7 @@ export default function Home() {
                 <div className="mt-6">
 
                   {isPremiumUser ? (
+
                     <div className="space-y-2">
                       <button
                         onClick={handleManageSubscription}
@@ -2762,15 +2763,25 @@ export default function Home() {
                       >
                         {isBillingLoading ? "Please wait..." : "Manage Subscription"}
                       </button>
-
-                      <button
-                        onClick={handleCancelSubscription}
-                        disabled={isBillingLoading}
-                        className="w-full rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-70"
-                      >
-                        {isBillingLoading ? "Please wait..." : "Cancel Subscription"}
-                      </button>
+                  
+                      {!profile?.subscription_cancel_at_period_end ? (
+                        <button
+                          onClick={handleCancelSubscription}
+                          disabled={isBillingLoading}
+                          className="w-full rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-70"
+                        >
+                          {isBillingLoading ? "Please wait..." : "Cancel Subscription"}
+                        </button>
+                      ) : (
+                        <button
+                          disabled
+                          className="w-full rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-700"
+                        >
+                          Cancellation Scheduled
+                        </button>
+                      )}
                     </div>
+
                   ) : isProUser ? (
 
                     <button
@@ -2824,6 +2835,7 @@ export default function Home() {
 
 
                   {isProUser ? (
+
                     <div className="space-y-2">
                       <button
                         onClick={handleManageSubscription}
@@ -2832,15 +2844,25 @@ export default function Home() {
                       >
                         {isBillingLoading ? "Please wait..." : "Manage Subscription"}
                       </button>
-
-                      <button
-                        onClick={handleCancelSubscription}
-                        disabled={isBillingLoading}
-                        className="w-full rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-70"
-                      >
-                        {isBillingLoading ? "Please wait..." : "Cancel Subscription"}
-                      </button>
+                    
+                      {!profile?.subscription_cancel_at_period_end ? (
+                        <button
+                          onClick={handleCancelSubscription}
+                          disabled={isBillingLoading}
+                          className="w-full rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-70"
+                        >
+                          {isBillingLoading ? "Please wait..." : "Cancel Subscription"}
+                        </button>
+                      ) : (
+                        <button
+                          disabled
+                          className="w-full rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-700"
+                        >
+                          Cancellation Scheduled
+                        </button>
+                      )}
                     </div>
+
                   ) : (
 
                     <button
@@ -3257,7 +3279,7 @@ export default function Home() {
                       >
                         See Plans
                       </button>
-              
+
                       {hasPaidPlan && (
                         <>
                           <button
@@ -3272,21 +3294,34 @@ export default function Home() {
                           >
                             {isBillingLoading ? "Please wait..." : "Manage Subscription"}
                           </button>
-              
-                          <button
-                            onClick={handleCancelSubscription}
-                            disabled={isBillingLoading}
-                            className={cn(
-                              "w-full rounded-md border px-2 py-1 text-[11px] font-semibold transition disabled:cursor-not-allowed disabled:opacity-70",
-                              theme === "dark"
-                                ? "border-rose-900 bg-rose-950/40 text-rose-300 hover:bg-rose-950/60"
-                                : "border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100"
-                            )}
-                          >
-                            {isBillingLoading ? "Please wait..." : "Cancel Subscription"}
-                          </button>
+                      
+                          {!profile?.subscription_cancel_at_period_end ? (
+                            <button
+                              onClick={handleCancelSubscription}
+                              disabled={isBillingLoading}
+                              className={cn(
+                                "w-full rounded-md border px-2 py-1 text-[11px] font-semibold transition disabled:cursor-not-allowed disabled:opacity-70",
+                                theme === "dark"
+                                  ? "border-rose-900 bg-rose-950/40 text-rose-300 hover:bg-rose-950/60"
+                                  : "border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100"
+                              )}
+                            >
+                              {isBillingLoading ? "Please wait..." : "Cancel Subscription"}
+                            </button>
+                          ) : (
+                            <div
+                              className={cn(
+                                "w-full rounded-md border px-2 py-1 text-center text-[11px] font-semibold",
+                                theme === "dark"
+                                  ? "border-amber-900 bg-amber-950/40 text-amber-300"
+                                  : "border-amber-200 bg-amber-50 text-amber-700"
+                              )}
+                            >
+                              Cancellation Scheduled
+                            </div>
+                          )}
                         </>
-                      )}
+                      )}              
                     </div>
                   )}
               
