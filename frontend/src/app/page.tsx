@@ -3246,17 +3246,17 @@ export default function Home() {
                               Trial ends on {formatPlanDate(profile?.plan_ends_at || profile?.trial_ends_at)}
                             </div>
                         )}
-              
 
-                        {hasPaidPlan &&
+
+                        {subscriptionStatus === "active" &&
                           profile?.subscription_cancel_at_period_end &&
                           profile?.plan_ends_at && (
                             <div className="mt-0.5 text-[9px] text-orange-600">
                               Cancels on {formatPlanDate(profile.plan_ends_at)}
                             </div>
-                          )}
-              
-                        {hasPaidPlan &&
+                        )}
+                        
+                        {subscriptionStatus === "active" &&
                           !profile?.subscription_cancel_at_period_end &&
                           profile?.plan_ends_at && (
                             <div
@@ -3267,7 +3267,8 @@ export default function Home() {
                             >
                               Active until {formatPlanDate(profile.plan_ends_at)}
                             </div>
-                          )}
+                        )}
+              
               
                         {!hasPaidPlan && canShowTrialEntry && (
                           <div className="mt-0.5 text-[9px] leading-3.5 text-blue-600">
