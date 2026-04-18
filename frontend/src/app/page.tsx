@@ -371,46 +371,63 @@ export default function Home() {
   };
   
 
-
   const formatPlanDate = (value?: string | null) => {
     if (!value) return "";
     return new Date(value).toLocaleDateString();
   };
-
-  const currentTier = (profile?.tier || "free").toLowerCase();
-  const isPremiumUser = currentTier === "premium";
-  const isProUser = currentTier === "pro";
-  const hasPaidPlan = isPremiumUser || isProUser;
+  
+  const rawTier = (profile?.tier || "free").toLowerCase();
+  const subscriptionStatus = (profile?.subscription_status || "").toLowerCase();
+  
+  const effectiveTier =
+    rawTier === "pro"
+      ? "pro"
+      : rawTier === "premium" ||
+        subscriptionStatus === "trialing" ||
+        (subscriptionStatus === "active" && !!profile?.stripe_subscription_id)
+      ? "premium"
+      : "free";
+  
+  const isPremiumUser = effectiveTier === "premium";
+  const isProUser = effectiveTier === "pro";
+  
+  const hasPaidPlan =
+    isPremiumUser ||
+    isProUser ||
+    subscriptionStatus === "trialing" ||
+    subscriptionStatus === "active";
   
   const allowedMockDifficulties =
-    currentTier === "pro"
+    effectiveTier === "pro"
       ? ["easy", "medium", "hard"]
-      : currentTier === "premium"
+      : effectiveTier === "premium"
       ? ["easy", "medium"]
       : ["easy"];
   
   const getMaxDocumentSizeForTier = () => {
-    if (currentTier === "premium") return 15 * 1024 * 1024;
-    if (currentTier === "pro") return 30 * 1024 * 1024;
+    if (effectiveTier === "premium") return 15 * 1024 * 1024;
+    if (effectiveTier === "pro") return 30 * 1024 * 1024;
     return 5 * 1024 * 1024;
   };
   
   const getMaxImageSizeForTier = () => {
-    if (currentTier === "premium") return 8 * 1024 * 1024;
-    if (currentTier === "pro") return 15 * 1024 * 1024;
+    if (effectiveTier === "premium") return 8 * 1024 * 1024;
+    if (effectiveTier === "pro") return 15 * 1024 * 1024;
     return 3 * 1024 * 1024;
   };
-
+  
   const hasUsedTrial = Boolean(
-    profile?.subscription_status === "trialing" ||
+    subscriptionStatus === "trialing" ||
     profile?.trial_ends_at ||
     profile?.stripe_customer_id
   );
-
+  
   const canShowTrialEntry = !hasUsedTrial && !hasPaidPlan;
+  
+  const currentPlanLabel =
+    isProUser ? "Pro" : isPremiumUser ? "Premium" : "Free";
 
-
-  const currentPlanLabel = isProUser ? "Pro" : isPremiumUser ? "Premium" : "Free";
+  
 
   const handlePlanLimitReached = (
     message: string,
@@ -731,7 +748,7 @@ export default function Home() {
       const maxSize = getMaxImageSizeForTier();
       if (blob.size > maxSize) {
         handlePlanSizeUpgrade(
-          `Image too large. Your ${currentTier} plan allows up to ${Math.floor(
+          `Image too large. Your ${effectiveTier} plan allows up to ${Math.floor(
             maxSize / (1024 * 1024)
           )}MB images.`
         );
@@ -856,7 +873,7 @@ export default function Home() {
       alive = false;
       window.removeEventListener("paste", handlePaste);
     };
-  }, [API, user, currentTier]);
+  }, [API, user, effectiveTier]);
 
 
 
@@ -978,7 +995,7 @@ export default function Home() {
       const maxSize = getMaxDocumentSizeForTier();
       if (file.size > maxSize) {
         handlePlanSizeUpgrade(
-          `File too large. Your ${currentTier} plan allows up to ${Math.floor(
+          `File too large. Your ${effectiveTier} plan allows up to ${Math.floor(
             maxSize / (1024 * 1024)
           )}MB documents.`
         );
@@ -1250,7 +1267,7 @@ export default function Home() {
       const maxSize = getMaxImageSizeForTier();
       if (file.size > maxSize) {
         handlePlanSizeUpgrade(
-          `Image too large. Your ${currentTier} plan allows up to ${Math.floor(
+          `Image too large. Your ${effectiveTier} plan allows up to ${Math.floor(
             maxSize / (1024 * 1024)
           )}MB images.`
         );
@@ -2623,7 +2640,7 @@ export default function Home() {
                 </div>
 
                 <div className="mt-6">
-                  {currentTier === "free" ? (
+                  {effectiveTier === "free" ? (
                     <button
                       disabled
                       className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-500"
@@ -3125,7 +3142,7 @@ export default function Home() {
                           </span>
                         </div>
               
-                        {profile?.subscription_status === "trialing" && profile?.trial_ends_at && (
+                        {subscriptionStatus === "trialing" && profile?.trial_ends_at && (
                           <div className="mt-0.5 text-[9px] text-amber-600">
                             Trial ends on {formatPlanDate(profile.trial_ends_at)}
                           </div>
@@ -3472,7 +3489,7 @@ export default function Home() {
                           className={cn(
                             "flex h-[35px] w-[70px] sm:w-[75px] items-center justify-center rounded-xl border-2 px-0 text-sm font-medium transition-colors shrink-0",
                             theme === "dark"
-                              ? "border-blue-500 bg-slate-700 text-slate-100 hover:bg-slate-800"
+                              ? "border-blue-500 bg-slate-700 text-slate-100 hover:bg-slate-700"
                               : "border-blue-500 bg-slate-100 text-slate-700 hover:bg-slate-100"
                           )}
                         >
