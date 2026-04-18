@@ -94,8 +94,9 @@ type DocumentRow = {
   updated_at?: string;
 };
 
+
 type ChatMessageRow = {
-  id?: number;
+  id?: string;
   document_id: string;
   user_id: string;
   role: "user" | "assistant";
@@ -320,6 +321,7 @@ export default function Home() {
   };
   
 
+
   const handleClearChatHistory = async () => {
     if (!activeId) return;
   
@@ -340,7 +342,7 @@ export default function Home() {
       )
     );
   
-    await replaceChatHistoryInCloud(activeId, []);
+    await replaceChatHistoryInCloud(activeItem, []);
   
     setQuestion("");
     setAnswer("");
@@ -353,6 +355,7 @@ export default function Home() {
       askIntervalRef.current = null;
     }
   };
+
 
 
 
@@ -523,9 +526,11 @@ export default function Home() {
 
   const saveLibraryItemToCloud = async (item: LibraryItem) => {
     await upsertDocumentToCloud(item);
-    await replaceChatHistoryInCloud(item.id, item.chatHistory || []);
+    await replaceChatHistoryInCloud(item, item.chatHistory || []);
   };
-  
+
+
+
   const deleteDocumentFromCloud = async (documentId: string) => {
     if (!user?.id || !documentId) return;
   
