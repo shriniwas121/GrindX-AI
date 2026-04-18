@@ -3230,12 +3230,24 @@ export default function Home() {
                           </span>
                         </div>
               
-                        {subscriptionStatus === "trialing" && profile?.trial_ends_at && (
-                          <div className="mt-0.5 text-[9px] text-amber-600">
-                            Trial ends on {formatPlanDate(profile.trial_ends_at)}
-                          </div>
+
+                        {subscriptionStatus === "trialing" &&
+                          profile?.subscription_cancel_at_period_end &&
+                          (profile?.plan_ends_at || profile?.trial_ends_at) && (
+                            <div className="mt-0.5 text-[9px] text-orange-600">
+                              Trial cancels on {formatPlanDate(profile?.plan_ends_at || profile?.trial_ends_at)}
+                            </div>
+                        )}
+                        
+                        {subscriptionStatus === "trialing" &&
+                          !profile?.subscription_cancel_at_period_end &&
+                          (profile?.plan_ends_at || profile?.trial_ends_at) && (
+                            <div className="mt-0.5 text-[9px] text-amber-600">
+                              Trial ends on {formatPlanDate(profile?.plan_ends_at || profile?.trial_ends_at)}
+                            </div>
                         )}
               
+
                         {hasPaidPlan &&
                           profile?.subscription_cancel_at_period_end &&
                           profile?.plan_ends_at && (
