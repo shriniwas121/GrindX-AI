@@ -362,25 +362,30 @@ export default function Home() {
       return;
     }
   
-    let attempts = 0;
-    let latestProfile = null;
+    const profilePayload = {
+      id: nextUser.id,
+      email: nextUser.email,
+      full_name:
+        nextUser.user_metadata?.full_name ||
+        nextUser.user_metadata?.name ||
+        "",
+    };
   
-    while (attempts < 6 && !latestProfile) {
-      latestProfile = await fetchProfile(nextUser.id);
-      if (latestProfile) break;
+    const { data: upsertedProfile, error: upsertError } = await supabase
+      .from("profiles")
+      .upsert(profilePayload, { onConflict: "id" })
+      .select(
+        "email, tier, full_name, subscription_status, trial_ends_at, plan_ends_at, stripe_customer_id, stripe_subscription_id, subscription_cancel_at_period_end"
+      )
+      .maybeSingle();
   
-      attempts += 1;
-      await new Promise((resolve) => setTimeout(resolve, 700));
-    }
+    if (upsertError) {
+      console.error("profiles upsert failed:", upsertError);
   
-    if (!latestProfile) {
       setProfile({
         email: nextUser.email,
         tier: "free",
-        full_name:
-          nextUser.user_metadata?.full_name ||
-          nextUser.user_metadata?.name ||
-          "",
+        full_name: profilePayload.full_name,
         subscription_status: "free",
         trial_ends_at: null,
         plan_ends_at: null,
@@ -388,8 +393,26 @@ export default function Home() {
         stripe_subscription_id: null,
         subscription_cancel_at_period_end: false,
       });
+  
+      return;
     }
+  
+    setProfile(
+      upsertedProfile || {
+        email: nextUser.email,
+        tier: "free",
+        full_name: profilePayload.full_name,
+        subscription_status: "free",
+        trial_ends_at: null,
+        plan_ends_at: null,
+        stripe_customer_id: null,
+        stripe_subscription_id: null,
+        subscription_cancel_at_period_end: false,
+      }
+    );
   };
+
+
 
 
 
@@ -620,7 +643,6 @@ export default function Home() {
   }, [showStudyDrawer]);
 
 
-
   useEffect(() => {
     let mounted = true;
   
@@ -630,16 +652,22 @@ export default function Home() {
       } = await supabase.auth.getSession();
   
       if (!mounted) return;
-      await syncAuthState(session);
+  
+      syncAuthState(session).catch((err) => {
+        console.error("Initial session sync failed:", err);
+      });
     };
   
     loadSession();
   
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!mounted) return;
-      await syncAuthState(session);
+  
+      syncAuthState(session).catch((err) => {
+        console.error("Auth state sync failed:", err);
+      });
     });
   
     return () => {
@@ -647,8 +675,6 @@ export default function Home() {
       subscription.unsubscribe();
     };
   }, []);
-
-
 
 
 
@@ -2423,14 +2449,15 @@ export default function Home() {
 
   const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+  
+    if (isAuthLoading) return;
+  
     setIsAuthLoading(true);
     setAuthMessage("");
   
     try {
-
-
       if (authMode === "signup") {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email: authEmail,
           password: authPassword,
           options: {
@@ -2439,23 +2466,32 @@ export default function Home() {
             },
           },
         });
-      
+  
         if (error) throw error;
-      
+  
+        if (data.user) {
+          await supabase.from("profiles").upsert(
+            {
+              id: data.user.id,
+              email: data.user.email,
+              full_name: authName || "",
+            },
+            { onConflict: "id" }
+          );
+        }
+  
         setAuthMessage("Account created successfully. Please sign in.");
         setAuthMode("signin");
         return;
       }
-
- 
+  
       const { error } = await supabase.auth.signInWithPassword({
         email: authEmail,
         password: authPassword,
-      });  
-
+      });
+  
       if (error) throw error;
   
-
       setShowAuthModal(false);
       setAuthEmail("");
       setAuthPassword("");
