@@ -2097,11 +2097,10 @@ async def ocr(
 async def ask(
     request: Request,
     question: str = Form(...),
-    document_text: str = Form(...),
+    document_text: str = Form(""),
     chat_history: str = Form(""),
     user_id: str = Form("")
 ):
-
 
     # 🔐 SECURITY CHECK (ADD THIS HERE)
     if request.headers.get("x-api-key") != os.getenv("APP_API_KEY"):

@@ -481,11 +481,9 @@ export default function Home() {
       console.error("upsert document failed:", error);
     }
   };
-  
-  const replaceChatHistoryInCloud = async (
-    documentId: string,
-    chatHistory: ChatMessage[]
-  ) => {
+
+  const replaceChatHistoryInCloud = async (item: LibraryItem, history: ChatMessage[]) => {
+ 
     if (!user?.id || !documentId) return;
   
     const { error: deleteError } = await supabase
@@ -1702,6 +1700,15 @@ export default function Home() {
       formData.append("document_text", docText);
       formData.append("chat_history", chatHistoryText);
   
+
+      console.log("ASK DEBUG", {
+        activeId,
+        userQuestion,
+        documentTextLength: docText?.length || 0,
+        hasDocumentTextField: typeof docText === "string",
+      });
+
+
       const res = await fetch(`${API}/ask`, {
         method: "POST",
         headers: {
@@ -1731,6 +1738,7 @@ export default function Home() {
       const sourceType = data.source_type || "none";
 
 
+
       if (activeItem && activeId) {
         const finalHistory: ChatMessage[] = [
           ...(activeItem.chatHistory || []),
@@ -1738,7 +1746,7 @@ export default function Home() {
           { role: "assistant", content: fullText, sourceType },
         ];
       
-        await replaceChatHistoryInCloud(activeId, finalHistory);
+        await replaceChatHistoryInCloud(activeItem, finalHistory);
       }
 
   
