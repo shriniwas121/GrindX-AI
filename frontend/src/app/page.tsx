@@ -362,18 +362,48 @@ export default function Home() {
       return;
     }
   
-    const { error: upsertError } = await supabase.from("profiles").upsert({
+    const profilePayload = {
       id: nextUser.id,
       email: nextUser.email,
-    });
+      full_name:
+        nextUser.user_metadata?.full_name ||
+        nextUser.user_metadata?.name ||
+        null,
+    };
+  
+    const { data: upsertedProfile, error: upsertError } = await supabase
+      .from("profiles")
+      .upsert(profilePayload, { onConflict: "id" })
+      .select(
+        "email, tier, full_name, subscription_status, trial_ends_at, plan_ends_at, stripe_customer_id, stripe_subscription_id, subscription_cancel_at_period_end"
+      )
+      .single();
   
     if (upsertError) {
       console.error("profiles upsert failed:", upsertError);
-      throw upsertError;
+  
+      const fallbackProfile = await fetchProfile(nextUser.id);
+  
+      if (!fallbackProfile) {
+        setProfile({
+          email: nextUser.email,
+          tier: "free",
+          full_name: profilePayload.full_name,
+          subscription_status: "free",
+          trial_ends_at: null,
+          plan_ends_at: null,
+          stripe_customer_id: null,
+          stripe_subscription_id: null,
+          subscription_cancel_at_period_end: false,
+        });
+      }
+  
+      return;
     }
   
-    await fetchProfile(nextUser.id);
+    setProfile(upsertedProfile);
   };
+
 
 
 
@@ -2432,11 +2462,11 @@ export default function Home() {
         return;
       }
   
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { error } = await supabase.auth.signInWithPassword({
         email: authEmail,
         password: authPassword,
-      });
-  
+      });  
+
       if (error) throw error;
   
 
@@ -2464,14 +2494,21 @@ export default function Home() {
       setProfile(null);
       setUser(null);
       clearWorkspaceState();
-
-      await supabase.auth.signOut();
-
-      window.location.href = "https://grindx.insightxai.com.au";
+  
+      const { error } = await supabase.auth.signOut();
+  
+      if (error) {
+        console.error("Sign out failed:", error);
+        throw error;
+      }
+  
+      window.location.replace("https://grindx.insightxai.com.au");
     } catch (err) {
       console.error("Sign out failed:", err);
+      alert("Sign out failed. Please try again.");
     }
   };
+
 
 
 
