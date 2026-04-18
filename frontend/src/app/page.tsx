@@ -81,6 +81,31 @@ type LibraryItem = {
   };
 };
 
+
+type DocumentRow = {
+  id: string;
+  user_id: string;
+  name: string;
+  type: string;
+  status: string;
+  summary: string | null;
+  document_text: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+type ChatMessageRow = {
+  id?: number;
+  document_id: string;
+  user_id: string;
+  role: "user" | "assistant";
+  content: string;
+  original_content?: string | null;
+  source_type?: "document" | "external" | "none" | null;
+  position: number;
+  created_at?: string;
+};
+
 // Google Icon Component
 const GoogleIcon = () => (
   <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -168,6 +193,7 @@ export default function Home() {
 
   const [isBillingLoading, setIsBillingLoading] = useState(false);
   const [showPlansModal, setShowPlansModal] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
   const [audioLimitMessage, setAudioLimitMessage] = useState("");
   const [showBillingActions, setShowBillingActions] = useState(false);
@@ -182,48 +208,40 @@ export default function Home() {
   const uploadAbortRef = useRef<AbortController | null>(null);
 
   // RESTORE LIBRARY ON PAGE LOAD
+
   useEffect(() => {
-    try {
-      if (!userLibraryKey || !userActiveIdKey) {
+    const loadWorkspace = async () => {
+      try {
+        if (!user?.id) {
+          setLibrary([]);
+          setActiveId("");
+          return;
+        }
+  
+        await loadWorkspaceFromCloud(user.id);
+  
+        setQuestion("");
+        setAnswer("");
+        setStreamingText("");
+        setActiveTab("chat");
+        setTabContent("");
+        setTranslatedTabContent("");
+        setQuizData([]);
+        setQuizAnswers({});
+        setQuizScore(null);
+        setCurrentQ(0);
+        setChatLanguage("english");
+        setTabLanguage("english");
+      } catch (err) {
+        console.error("Workspace restore failed", err);
         setLibrary([]);
         setActiveId("");
-        return;
       }
+    };
   
-      const savedLibrary = localStorage.getItem(userLibraryKey);
-      const savedActiveId = localStorage.getItem(userActiveIdKey);
-  
-      if (!savedLibrary) {
-        setLibrary([]);
-        setActiveId("");
-        return;
-      }
-  
-      const parsed: LibraryItem[] = JSON.parse(savedLibrary);
-  
-      setLibrary(Array.isArray(parsed) ? parsed : []);
-      setActiveId(savedActiveId || "");
-      setFileName("");
-      setSummary("");
-      setDocumentText("");
-      setQuestion("");
-      setAnswer("");
-      setStreamingText("");
-      setActiveTab("chat");
-      setTabContent("");
-      setTranslatedTabContent("");
-      setQuizData([]);
-      setQuizAnswers({});
-      setQuizScore(null);
-      setCurrentQ(0);
-      setChatLanguage("english");
-      setTabLanguage("english");
-    } catch (err) {
-      console.error("Restore failed", err);
-      setLibrary([]);
-      setActiveId("");
-    }
-  }, [userLibraryKey, userActiveIdKey]);
+    loadWorkspace();
+  }, [user?.id]);
+
 
 
   const handleGoogleSignIn = async () => {
@@ -301,7 +319,8 @@ export default function Home() {
     URL.revokeObjectURL(url);
   };
   
-  const handleClearChatHistory = () => {
+
+  const handleClearChatHistory = async () => {
     if (!activeId) return;
   
     const activeItem = library.find((item) => item.id === activeId);
@@ -321,6 +340,8 @@ export default function Home() {
       )
     );
   
+    await replaceChatHistoryInCloud(activeId, []);
+  
     setQuestion("");
     setAnswer("");
     setStreamingText("");
@@ -332,6 +353,8 @@ export default function Home() {
       askIntervalRef.current = null;
     }
   };
+
+
 
   const fetchProfile = async (userId: string) => {
     const { data: profileData, error } = await supabase
@@ -352,6 +375,171 @@ export default function Home() {
   };
 
 
+  const mapDocumentRowToLibraryItem = (
+    doc: DocumentRow,
+    messages: ChatMessageRow[]
+  ): LibraryItem => {
+    const sortedMessages = [...messages]
+      .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
+      .map((msg) => ({
+        role: msg.role,
+        content: msg.content,
+        originalContent: msg.original_content || undefined,
+        sourceType: (msg.source_type as "document" | "external" | "none") || "none",
+      }));
+  
+    return {
+      id: doc.id,
+      name: doc.name,
+      type: (doc.type as LibraryItem["type"]) || "TXT",
+      status: (doc.status as LibraryItem["status"]) || "Analyzed",
+      summary: doc.summary || "",
+      documentText: doc.document_text || "",
+      chatHistory: sortedMessages,
+    };
+  };
+  
+  const loadWorkspaceFromCloud = async (userId: string) => {
+    const { data: docs, error: docsError } = await supabase
+      .from("documents")
+      .select("id, user_id, name, type, status, summary, document_text, created_at, updated_at")
+      .eq("user_id", userId)
+      .order("updated_at", { ascending: false });
+  
+    if (docsError) {
+      console.error("load documents failed:", docsError);
+      return;
+    }
+  
+    const documentIds = (docs || []).map((doc) => doc.id);
+  
+    let chatRows: ChatMessageRow[] = [];
+  
+    if (documentIds.length > 0) {
+      const { data: msgs, error: msgsError } = await supabase
+        .from("chat_messages")
+        .select("id, document_id, user_id, role, content, original_content, source_type, position, created_at")
+        .eq("user_id", userId)
+        .in("document_id", documentIds)
+        .order("position", { ascending: true });
+  
+      if (msgsError) {
+        console.error("load chat messages failed:", msgsError);
+      } else {
+        chatRows = (msgs || []) as ChatMessageRow[];
+      }
+    }
+  
+    const merged: LibraryItem[] = (docs || []).map((doc) =>
+      mapDocumentRowToLibraryItem(
+        doc as DocumentRow,
+        chatRows.filter((m) => m.document_id === doc.id)
+      )
+    );
+  
+    setLibrary(merged);
+  
+    const savedActiveId = userActiveIdKey
+      ? localStorage.getItem(userActiveIdKey)
+      : "";
+  
+    const selected =
+      merged.find((item) => item.id === savedActiveId) || merged[0] || null;
+  
+    if (selected) {
+      setActiveId(selected.id);
+      setFileName(selected.name);
+      setSummary(selected.summary);
+      setDocumentText(selected.documentText);
+    } else {
+      setActiveId("");
+      setFileName("");
+      setSummary("");
+      setDocumentText("");
+    }
+  };
+  
+  const upsertDocumentToCloud = async (item: LibraryItem) => {
+    if (!user?.id) return;
+  
+    const payload = {
+      id: item.id,
+      user_id: user.id,
+      name: item.name,
+      type: item.type,
+      status: item.status,
+      summary: item.summary || "",
+      document_text: item.documentText || "",
+      updated_at: new Date().toISOString(),
+    };
+  
+    const { error } = await supabase.from("documents").upsert(payload, {
+      onConflict: "id",
+    });
+  
+    if (error) {
+      console.error("upsert document failed:", error);
+    }
+  };
+  
+  const replaceChatHistoryInCloud = async (
+    documentId: string,
+    chatHistory: ChatMessage[]
+  ) => {
+    if (!user?.id || !documentId) return;
+  
+    const { error: deleteError } = await supabase
+      .from("chat_messages")
+      .delete()
+      .eq("user_id", user.id)
+      .eq("document_id", documentId);
+  
+    if (deleteError) {
+      console.error("delete old chat failed:", deleteError);
+      return;
+    }
+  
+    if (!chatHistory.length) return;
+  
+    const rows: ChatMessageRow[] = chatHistory.map((msg, index) => ({
+      document_id: documentId,
+      user_id: user.id,
+      role: msg.role,
+      content: msg.content,
+      original_content: msg.originalContent || null,
+      source_type: msg.sourceType || "none",
+      position: index,
+    }));
+  
+    const { error: insertError } = await supabase
+      .from("chat_messages")
+      .insert(rows);
+  
+    if (insertError) {
+      console.error("insert chat failed:", insertError);
+    }
+  };
+  
+  const saveLibraryItemToCloud = async (item: LibraryItem) => {
+    await upsertDocumentToCloud(item);
+    await replaceChatHistoryInCloud(item.id, item.chatHistory || []);
+  };
+  
+  const deleteDocumentFromCloud = async (documentId: string) => {
+    if (!user?.id || !documentId) return;
+  
+    const { error } = await supabase
+      .from("documents")
+      .delete()
+      .eq("user_id", user.id)
+      .eq("id", documentId);
+  
+    if (error) {
+      console.error("delete document failed:", error);
+    }
+  };
+
+
   const syncAuthState = async (session: any) => {
     const nextUser = session?.user ?? null;
     setUser(nextUser);
@@ -362,30 +550,25 @@ export default function Home() {
       return;
     }
   
-    const profilePayload = {
-      id: nextUser.id,
-      email: nextUser.email,
-      full_name:
-        nextUser.user_metadata?.full_name ||
-        nextUser.user_metadata?.name ||
-        "",
-    };
+    let attempts = 0;
+    let latestProfile = null;
   
-    const { data: upsertedProfile, error: upsertError } = await supabase
-      .from("profiles")
-      .upsert(profilePayload, { onConflict: "id" })
-      .select(
-        "email, tier, full_name, subscription_status, trial_ends_at, plan_ends_at, stripe_customer_id, stripe_subscription_id, subscription_cancel_at_period_end"
-      )
-      .maybeSingle();
+    while (attempts < 6 && !latestProfile) {
+      latestProfile = await fetchProfile(nextUser.id);
+      if (latestProfile) break;
   
-    if (upsertError) {
-      console.error("profiles upsert failed:", upsertError);
+      attempts += 1;
+      await new Promise((resolve) => setTimeout(resolve, 700));
+    }
   
+    if (!latestProfile) {
       setProfile({
         email: nextUser.email,
         tier: "free",
-        full_name: profilePayload.full_name,
+        full_name:
+          nextUser.user_metadata?.full_name ||
+          nextUser.user_metadata?.name ||
+          "",
         subscription_status: "free",
         trial_ends_at: null,
         plan_ends_at: null,
@@ -393,26 +576,10 @@ export default function Home() {
         stripe_subscription_id: null,
         subscription_cancel_at_period_end: false,
       });
-  
-      return;
     }
   
-    setProfile(
-      upsertedProfile || {
-        email: nextUser.email,
-        tier: "free",
-        full_name: profilePayload.full_name,
-        subscription_status: "free",
-        trial_ends_at: null,
-        plan_ends_at: null,
-        stripe_customer_id: null,
-        stripe_subscription_id: null,
-        subscription_cancel_at_period_end: false,
-      }
-    );
+    await loadWorkspaceFromCloud(nextUser.id);
   };
-
-
 
 
 
@@ -891,6 +1058,7 @@ export default function Home() {
         };
   
         setLibrary((prev) => [newItem, ...prev]);
+        await saveLibraryItemToCloud(newItem);
         setActiveId(newItem.id);
         setFileName("Screenshot");
         setSummary(safeSummary);
@@ -1100,7 +1268,13 @@ export default function Home() {
       const newItem: LibraryItem = {
         id: crypto.randomUUID(),
         name: data.filename,
-        type: "TXT",
+        type: file.name.toLowerCase().endsWith(".pdf")
+          ? "PDF"
+          : file.name.toLowerCase().endsWith(".doc") || file.name.toLowerCase().endsWith(".docx")
+          ? "WORD"
+          : file.name.toLowerCase().endsWith(".sas")
+          ? "SAS"
+          : "TXT",
         status: "Analyzed",
         summary: data.summary,
         documentText: data.document_text,
@@ -1114,6 +1288,7 @@ export default function Home() {
       };
   
       setLibrary((prev) => [newItem, ...prev]);
+      await saveLibraryItemToCloud(newItem);
       setActiveId(newItem.id);
       setQuestion("");
       setStreamingText("");
@@ -1212,6 +1387,7 @@ export default function Home() {
       };
   
       setLibrary((prev) => [newItem, ...prev]);
+      await saveLibraryItemToCloud(newItem);
       setActiveId(newItem.id);
       setFileName(data.filename || finalUrl);
       setSummary(safeSummary);
@@ -1295,6 +1471,7 @@ export default function Home() {
       };
   
       setLibrary((prev) => [newItem, ...prev]);
+      await saveLibraryItemToCloud(newItem);
       setActiveId(newItem.id);
       setPastedText("");
       setActiveTab("chat");
@@ -1397,6 +1574,7 @@ export default function Home() {
       };
   
       setLibrary((prev) => [newItem, ...prev]);
+      await saveLibraryItemToCloud(newItem);
       setActiveId(newItem.id);
       setQuestion("");
       setAnswer("");
@@ -1552,6 +1730,16 @@ export default function Home() {
       const fullText = data.answer;
       const sourceType = data.source_type || "none";
 
+
+      if (activeItem && activeId) {
+        const finalHistory: ChatMessage[] = [
+          ...(activeItem.chatHistory || []),
+          { role: "user", content: userQuestion },
+          { role: "assistant", content: fullText, sourceType },
+        ];
+      
+        await replaceChatHistoryInCloud(activeId, finalHistory);
+      }
 
   
       setStreamingText("");
@@ -2339,10 +2527,10 @@ export default function Home() {
   };
 
 
-
-  const handleDeleteItem = (id: string) => {
-    setLibrary(prev => prev.filter(item => item.id !== id));
-
+  const handleDeleteItem = async (id: string) => {
+    setLibrary((prev) => prev.filter((item) => item.id !== id));
+    await deleteDocumentFromCloud(id);
+  
     if (activeId === id) {
       setActiveId("");
       setFileName("");
@@ -2361,14 +2549,25 @@ export default function Home() {
     }
   };
 
-  const handleRename = (id: string) => {
+
+  const handleRename = async (id: string) => {
     const newName = prompt("Enter new name:");
     if (!newName) return;
-    setLibrary(prev => prev.map(item =>
-      item.id === id ? { ...item, name: newName } : item
-    ));
+  
+    setLibrary((prev) =>
+      prev.map((item) =>
+        item.id === id ? { ...item, name: newName } : item
+      )
+    );
+  
+    const item = library.find((x) => x.id === id);
+    if (!item) return;
+  
+    await upsertDocumentToCloud({
+      ...item,
+      name: newName,
+    });
   };
-
 
   const startNewChat = () => {
     clearPendingUploadState();
@@ -2529,7 +2728,57 @@ export default function Home() {
     }
   };
 
-
+  const handleDeleteAccount = async () => {
+    if (!user) return;
+  
+    const confirmed = window.confirm(
+      "Delete your account permanently? Your profile, documents, chat history, and study data will be removed. A limited record of your email may be retained only to prevent repeated free-trial abuse."
+    );
+  
+    if (!confirmed) return;
+  
+    try {
+      setIsDeletingAccount(true);
+  
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+  
+      const accessToken = session?.access_token;
+      if (!accessToken) {
+        throw new Error("Your session has expired. Please sign in again.");
+      }
+  
+      const res = await fetch(`${API}/account/delete`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+  
+      const data = await res.json().catch(() => null);
+  
+      if (!res.ok) {
+        throw new Error(data?.detail || "Failed to delete account.");
+      }
+  
+      clearWorkspaceState();
+      setProfile(null);
+      setUser(null);
+      setShowAuthModal(false);
+      setShowPlansModal(false);
+      setShowBillingActions(false);
+  
+      await supabase.auth.signOut();
+  
+      window.location.replace("https://grindx.insightxai.com.au");
+    } catch (err: any) {
+      console.error("Delete account failed:", err);
+      alert(err.message || "Failed to delete account.");
+    } finally {
+      setIsDeletingAccount(false);
+    }
+  };
 
 
   const tabs = [
@@ -3309,6 +3558,7 @@ export default function Home() {
                             >
                               {isBillingLoading ? "Please wait..." : "Cancel Subscription"}
                             </button>
+
                           ) : (
                             <div
                               className={cn(
@@ -3321,6 +3571,21 @@ export default function Home() {
                               Cancellation Scheduled
                             </div>
                           )}
+
+                          <button
+                            onClick={handleDeleteAccount}
+                            disabled={isDeletingAccount}
+                            className={cn(
+                              "w-full rounded-md border px-2 py-1 text-[11px] font-semibold transition disabled:cursor-not-allowed disabled:opacity-70",
+                              theme === "dark"
+                                ? "border-rose-900 bg-rose-950/40 text-rose-300 hover:bg-rose-950/60"
+                                : "border-rose-300 bg-rose-50 text-rose-700 hover:bg-rose-100"
+                            )}
+                          >
+                            {isDeletingAccount ? "Deleting Account..." : "Delete Account"}
+                          </button>
+
+
                         </>
                       )}              
                     </div>

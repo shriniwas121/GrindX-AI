@@ -21,6 +21,7 @@ import base64
 from docx import Document
 from datetime import datetime, timezone
 import stripe
+from typing import Optional
 
 try:
     from pypdf import PdfReader
@@ -431,6 +432,98 @@ def get_supabase_headers():
         "Prefer": "return=representation",
     }
 
+def normalize_email(email: str) -> str:
+    return (email or "").strip().lower()
+
+
+def get_supabase_admin_headers():
+    return {
+        "apikey": SUPABASE_SERVICE_ROLE_KEY,
+        "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}",
+        "Content-Type": "application/json",
+    }
+
+
+def get_supabase_auth_headers(access_token: str):
+    return {
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": f"Bearer {access_token}",
+    }
+
+
+def get_user_from_access_token(access_token: str) -> Optional[dict]:
+    if not SUPABASE_URL or not SUPABASE_ANON_KEY or not access_token:
+        return None
+
+    try:
+        res = requests.get(
+            f"{SUPABASE_URL}/auth/v1/user",
+            headers=get_supabase_auth_headers(access_token),
+            timeout=10,
+        )
+        res.raise_for_status()
+        return res.json()
+    except Exception as e:
+        print("GET USER FROM TOKEN ERROR:", str(e))
+        return None
+
+
+def retained_identity_exists(email: str) -> bool:
+    normalized = normalize_email(email)
+    if not normalized:
+        return False
+
+    try:
+        res = requests.get(
+            f"{SUPABASE_URL}/rest/v1/retained_identities?normalized_email=eq.{normalized}&select=id",
+            headers=get_supabase_admin_headers(),
+            timeout=10,
+        )
+        res.raise_for_status()
+        rows = res.json()
+        return len(rows) > 0
+    except Exception as e:
+        print("RETAINED IDENTITY CHECK ERROR:", str(e))
+        return False
+
+
+def retain_identity(email: str, reason: str = "trial_used"):
+    normalized = normalize_email(email)
+    if not normalized:
+        return
+
+    try:
+        requests.post(
+            f"{SUPABASE_URL}/rest/v1/retained_identities",
+            headers={
+                **get_supabase_admin_headers(),
+                "Prefer": "resolution=merge-duplicates,return=minimal",
+            },
+            json={
+                "email": email.strip(),
+                "normalized_email": normalized,
+                "reason": reason,
+            },
+            timeout=10,
+        ).raise_for_status()
+    except Exception as e:
+        print("RETAIN IDENTITY ERROR:", str(e))
+
+
+def delete_supabase_auth_user(user_id: str):
+    if not SUPABASE_URL or not SUPABASE_SERVICE_ROLE_KEY or not user_id:
+        raise ValueError("Missing Supabase admin config or user id")
+
+    res = requests.delete(
+        f"{SUPABASE_URL}/auth/v1/admin/users/{user_id}",
+        headers={
+            "apikey": SUPABASE_SERVICE_ROLE_KEY,
+            "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}",
+        },
+        timeout=10,
+    )
+    res.raise_for_status()
+
 
 def unix_to_iso(ts):
     if not ts:
@@ -818,6 +911,7 @@ async def create_checkout_session(request: Request):
 
     selected_price_id = STRIPE_PRICE_ID_PREMIUM if plan == "premium" else STRIPE_PRICE_ID_PRO
 
+
     subscription_data = {
         "metadata": {
             "user_id": user_id,
@@ -826,7 +920,12 @@ async def create_checkout_session(request: Request):
     }
 
     if plan == "premium":
-        subscription_data["trial_period_days"] = 7
+        already_used_trial = retained_identity_exists(email) if email else False
+        if not already_used_trial:
+            subscription_data["trial_period_days"] = 7
+
+
+
 
     session = stripe.checkout.Session.create(
         mode="subscription",
@@ -844,6 +943,9 @@ async def create_checkout_session(request: Request):
     )
 
     return {"url": session.url}
+
+
+
 
 @app.post("/billing/create-portal-session")
 async def create_portal_session(request: Request):
@@ -970,6 +1072,45 @@ async def stripe_webhook(request: Request):
 
     return {"received": True}
 
+
+@app.post("/account/delete")
+async def delete_account(request: Request):
+    auth_header = request.headers.get("authorization", "")
+    if not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing access token")
+
+    access_token = auth_header.replace("Bearer ", "", 1).strip()
+    auth_user = get_user_from_access_token(access_token)
+
+    if not auth_user:
+        raise HTTPException(status_code=401, detail="Invalid access token")
+
+    user_id = auth_user.get("id")
+    email = auth_user.get("email", "").strip()
+
+    if not user_id:
+        raise HTTPException(status_code=400, detail="User id not found")
+
+    profile = get_profile_by_user_id(user_id) or {}
+    subscription_status = (profile.get("subscription_status") or "").lower()
+
+    has_used_trial = bool(
+        profile.get("trial_ends_at")
+        or profile.get("stripe_customer_id")
+        or subscription_status == "trialing"
+        or subscription_status == "active"
+    )
+
+    if email and has_used_trial:
+        retain_identity(email=email, reason="trial_used")
+
+    try:
+        delete_supabase_auth_user(user_id)
+    except Exception as e:
+        print("DELETE ACCOUNT ERROR:", str(e))
+        raise HTTPException(status_code=500, detail="Failed to delete account")
+
+    return {"success": True}
 
 @app.get("/")
 def root():
