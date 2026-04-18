@@ -493,8 +493,15 @@ def get_or_create_stripe_customer(user_id: str, email: str | None = None):
 def apply_subscription_to_profile(user_id: str, subscription):
     status = subscription.get("status", "free")
     cancel_at_period_end = bool(subscription.get("cancel_at_period_end", False))
-    trial_end = unix_to_iso(subscription.get("trial_end"))
-    current_period_end = unix_to_iso(subscription.get("current_period_end"))
+
+    trial_end_ts = subscription.get("trial_end")
+    current_period_end_ts = subscription.get("current_period_end")
+    cancel_at_ts = subscription.get("cancel_at")
+
+    trial_end = unix_to_iso(trial_end_ts)
+
+    plan_end_ts = current_period_end_ts or cancel_at_ts or trial_end_ts
+    plan_end = unix_to_iso(plan_end_ts)
 
     tier = "free"
     active_statuses = {"trialing", "active"}
@@ -517,7 +524,7 @@ def apply_subscription_to_profile(user_id: str, subscription):
             "tier": tier,
             "subscription_status": status,
             "trial_ends_at": trial_end,
-            "plan_ends_at": current_period_end,
+            "plan_ends_at": plan_end,
             "stripe_subscription_id": subscription.get("id"),
             "subscription_cancel_at_period_end": cancel_at_period_end,
         },
