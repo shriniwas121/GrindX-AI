@@ -87,7 +87,6 @@ type DocumentRow = {
   user_id: string;
   name: string;
   type: string;
-  status: string;
   summary: string | null;
   document_text: string | null;
   created_at?: string;
@@ -395,7 +394,7 @@ export default function Home() {
       id: doc.id,
       name: doc.name,
       type: (doc.type as LibraryItem["type"]) || "TXT",
-      status: (doc.status as LibraryItem["status"]) || "Analyzed",
+      status: "Analyzed",
       summary: doc.summary || "",
       documentText: doc.document_text || "",
       chatHistory: sortedMessages,
@@ -405,7 +404,7 @@ export default function Home() {
   const loadWorkspaceFromCloud = async (userId: string) => {
     const { data: docs, error: docsError } = await supabase
       .from("documents")
-      .select("id, user_id, name, type, status, summary, document_text, created_at, updated_at")
+      .select("id, user_id, name, type, summary, document_text, created_at, updated_at")
       .eq("user_id", userId)
       .order("updated_at", { ascending: false });
   
@@ -470,7 +469,6 @@ export default function Home() {
       user_id: user.id,
       name: item.name,
       type: item.type,
-      status: item.status,
       summary: item.summary || "",
       document_text: item.documentText || "",
       updated_at: new Date().toISOString(),
@@ -489,7 +487,6 @@ export default function Home() {
   
     console.log("document saved:", data);
   };
-
 
   const replaceChatHistoryInCloud = async (item: LibraryItem, history: ChatMessage[]) => {
     if (!user?.id || !item?.id) return;
