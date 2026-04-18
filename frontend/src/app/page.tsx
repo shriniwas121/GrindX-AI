@@ -476,13 +476,18 @@ export default function Home() {
       updated_at: new Date().toISOString(),
     };
   
-    const { error } = await supabase.from("documents").upsert(payload, {
-      onConflict: "id",
-    });
+    const { data, error } = await supabase
+      .from("documents")
+      .upsert(payload, { onConflict: "id" })
+      .select();
   
     if (error) {
       console.error("upsert document failed:", error);
+      alert(`Document save failed: ${error.message}`);
+      return;
     }
+  
+    console.log("document saved:", data);
   };
 
 
@@ -524,12 +529,11 @@ export default function Home() {
   };
 
 
+
   const saveLibraryItemToCloud = async (item: LibraryItem) => {
     await upsertDocumentToCloud(item);
     await replaceChatHistoryInCloud(item, item.chatHistory || []);
   };
-
-
 
   const deleteDocumentFromCloud = async (documentId: string) => {
     if (!user?.id || !documentId) return;
