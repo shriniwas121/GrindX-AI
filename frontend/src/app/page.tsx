@@ -3255,20 +3255,8 @@ export default function Home() {
                               Cancels on {formatPlanDate(profile.plan_ends_at)}
                             </div>
                         )}
-                        
-                        {subscriptionStatus === "active" &&
-                          !profile?.subscription_cancel_at_period_end &&
-                          profile?.plan_ends_at && (
-                            <div
-                              className={cn(
-                                "mt-0.5 text-[9px]",
-                                theme === "dark" ? "text-slate-400" : "text-slate-500"
-                              )}
-                            >
-                              Active until {formatPlanDate(profile.plan_ends_at)}
-                            </div>
-                        )}
-              
+
+             
               
                         {!hasPaidPlan && canShowTrialEntry && (
                           <div className="mt-0.5 text-[9px] leading-3.5 text-blue-600">
