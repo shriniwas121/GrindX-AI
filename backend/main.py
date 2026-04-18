@@ -825,8 +825,8 @@ async def create_checkout_session(request: Request):
         },
     }
 
-    if plan == "premium":
-        subscription_data["trial_period_days"] = 1
+##    if plan == "premium":
+##        subscription_data["trial_period_days"] = 7
 
     session = stripe.checkout.Session.create(
         mode="subscription",
