@@ -362,14 +362,20 @@ export default function Home() {
       return;
     }
   
-    await supabase.from("profiles").upsert({
+    const { error: upsertError } = await supabase.from("profiles").upsert({
       id: nextUser.id,
       email: nextUser.email,
     });
   
+    if (upsertError) {
+      console.error("profiles upsert failed:", upsertError);
+      throw upsertError;
+    }
+  
     await fetchProfile(nextUser.id);
   };
-  
+
+
 
   const formatPlanDate = (value?: string | null) => {
     if (!value) return "";
@@ -2433,8 +2439,7 @@ export default function Home() {
   
       if (error) throw error;
   
-      await syncAuthState(data.session);
-  
+
       setShowAuthModal(false);
       setAuthEmail("");
       setAuthPassword("");
