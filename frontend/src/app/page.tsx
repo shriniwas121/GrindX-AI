@@ -43,6 +43,8 @@ import {
   TrendingUp,
   Sun,
   Moon,
+  Download,
+  Trash2,
 } from "lucide-react";
 
 // Simple cn utility - combines class names
@@ -271,6 +273,65 @@ export default function Home() {
     setIsAsking(false);
   };
 
+
+  const handleDownloadChat = () => {
+    const activeItem = library.find((item) => item.id === activeId);
+    if (!activeItem || !activeItem.chatHistory?.length) {
+      alert("No chat history available to download.");
+      return;
+    }
+  
+    const content = activeItem.chatHistory
+      .map((msg) => `${msg.role === "user" ? "User" : "Assistant"}:\n${msg.content}\n`)
+      .join("\n--------------------\n\n");
+  
+    const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+  
+    const link = document.createElement("a");
+    const safeName = (activeItem.name || "chat-history")
+      .replace(/[\\/:*?"<>|]+/g, "")
+      .replace(/\s+/g, "-");
+  
+    link.href = url;
+    link.download = `${safeName}-chat.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+  
+  const handleClearChatHistory = () => {
+    if (!activeId) return;
+  
+    const activeItem = library.find((item) => item.id === activeId);
+    if (!activeItem) return;
+  
+    const confirmed = window.confirm("Clear this chat history?");
+    if (!confirmed) return;
+  
+    setLibrary((prev) =>
+      prev.map((item) =>
+        item.id === activeId
+          ? {
+              ...item,
+              chatHistory: [],
+            }
+          : item
+      )
+    );
+  
+    setQuestion("");
+    setAnswer("");
+    setStreamingText("");
+    setIsAsking(false);
+    setIsStreaming(false);
+  
+    if (askIntervalRef.current) {
+      clearInterval(askIntervalRef.current);
+      askIntervalRef.current = null;
+    }
+  };
 
   const fetchProfile = async (userId: string) => {
     const { data: profileData, error } = await supabase
@@ -3365,6 +3426,7 @@ export default function Home() {
                     : "bg-white border-slate-300"
                 )}
               >
+
                 {/* Chat Tab */}
                 {(activeId || activeTab === "chat") && (
 
@@ -3384,20 +3446,16 @@ export default function Home() {
                           : "border-slate-100 bg-white"
                       )}
                     >
-
-
-                      <div className="flex items-center gap-2">
+                      <div className="flex min-w-0 items-center gap-2">
                         <select
                           value={chatLanguage}
                           onChange={(e) => handleLanguageChange(e.target.value, "chat")}
                           className={cn(
-                            "flex h-[35px] w-[100px] items-center justify-center rounded-xl border-2 px-0 text-sm font-medium transition-colors shrink-0",
+                            "h-[35px] w-[80px] sm:w-[85px] rounded-xl border-2 px-3 text-center text-sm font-medium transition-colors shrink-0",
                             theme === "dark"
                               ? "border-blue-500 bg-slate-700 text-slate-100 hover:bg-slate-700"
                               : "border-blue-500 bg-slate-100 text-slate-700 hover:bg-slate-100"
                           )}
-
-
                         >
                           <option value="english">English</option>
                           <option value="hindi">Hindi</option>
@@ -3408,12 +3466,11 @@ export default function Home() {
                           <option value="japanese">Japanese</option>
                           <option value="chinese">chinese</option>
                         </select>
-                  
-
+                    
                         <button
                           onClick={() => handleTranslate("chat")}
                           className={cn(
-                            "flex h-[35px] w-[100px] items-center justify-center rounded-xl border-2 px-0 text-sm font-medium transition-colors shrink-0",
+                            "flex h-[35px] w-[70px] sm:w-[75px] items-center justify-center rounded-xl border-2 px-0 text-sm font-medium transition-colors shrink-0",
                             theme === "dark"
                               ? "border-blue-500 bg-slate-700 text-slate-100 hover:bg-slate-700"
                               : "border-blue-500 bg-slate-100 text-slate-700 hover:bg-slate-100"
@@ -3421,10 +3478,39 @@ export default function Home() {
                         >
                           Translate
                         </button>
-
-
+                      </div>
+                    
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button
+                          onClick={handleDownloadChat}
+                          title="Download chat"
+                          aria-label="Download chat"
+                          className={cn(
+                            "flex h-[35px] w-[35px] items-center justify-center rounded-xl border-2 transition-colors shrink-0",
+                            theme === "dark"
+                              ? "border-slate-500 bg-slate-700 text-slate-100 hover:bg-slate-600"
+                              : "border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200"
+                          )}
+                        >
+                          <Download className="h-4 w-4" />
+                        </button>
+                    
+                        <button
+                          onClick={handleClearChatHistory}
+                          title="Clear chat"
+                          aria-label="Clear chat"
+                          className={cn(
+                            "flex h-[35px] w-[35px] items-center justify-center rounded-xl border-2 transition-colors shrink-0",
+                            theme === "dark"
+                              ? "border-slate-500 bg-slate-700 text-slate-100 hover:bg-slate-600"
+                              : "border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200"
+                          )}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
                       </div>
                     </div>
+
 
                     {/* Chat Messages */}
 
