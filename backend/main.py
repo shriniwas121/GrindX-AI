@@ -487,6 +487,7 @@ def retained_identity_exists(email: str) -> bool:
         print("RETAINED IDENTITY CHECK ERROR:", str(e))
         return False
 
+
 def retain_identity(email: str, reason: str = "trial_used"):
     normalized = normalize_email(email)
     if not normalized:
@@ -498,7 +499,7 @@ def retain_identity(email: str, reason: str = "trial_used"):
             f"{SUPABASE_URL}/rest/v1/retained_identities",
             headers={
                 **get_supabase_admin_headers(),
-                "Prefer": "resolution=merge-duplicates,return=minimal",
+                "Prefer": "return=representation",
             },
             json={
                 "email": email.strip(),
@@ -513,6 +514,7 @@ def retain_identity(email: str, reason: str = "trial_used"):
     except Exception as e:
         print("RETAIN IDENTITY ERROR:", str(e))
         raise
+
 
 
 
@@ -1091,16 +1093,22 @@ async def delete_account(request: Request):
     if not auth_user:
         raise HTTPException(status_code=401, detail="Invalid access token")
 
-    user_id = auth_user.get("id")
-    email = auth_user.get("email", "").strip()
 
+    user_id = auth_user.get("id")
+    
     if not user_id:
         raise HTTPException(status_code=400, detail="User id not found")
-
+    
     profile = get_profile_by_user_id(user_id) or {}
+    
+    email = (
+        (auth_user.get("email") or "").strip()
+        or (profile.get("email") or "").strip()
+    )
+    
     subscription_status = (profile.get("subscription_status") or "").lower()
     tier = (profile.get("tier") or "").lower()
-
+    
     has_used_trial = bool(
         profile.get("trial_ends_at")
         or profile.get("plan_ends_at")
@@ -1109,20 +1117,31 @@ async def delete_account(request: Request):
         or subscription_status in {"trialing", "active", "canceled", "past_due", "unpaid"}
         or tier in {"premium", "pro"}
     )
-
+    
     print("DELETE ACCOUNT DEBUG:", {
         "user_id": user_id,
         "email": email,
+        "profile_email": (profile.get("email") or "").strip(),
         "tier": tier,
         "subscription_status": subscription_status,
         "has_used_trial": has_used_trial,
     })
-
+    
     try:
         if email and has_used_trial:
             retain_identity(email=email, reason="trial_used")
-
+            print("RETAIN IDENTITY CALLED FOR:", email)
+        else:
+            print("RETAIN IDENTITY NOT CALLED:", {
+                "email_present": bool(email),
+                "has_used_trial": has_used_trial,
+            })
+    
         delete_supabase_auth_user(user_id)
+
+
+
+
 
     except Exception as e:
         print("DELETE ACCOUNT ERROR:", str(e))
