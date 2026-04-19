@@ -210,6 +210,10 @@ export default function Home() {
   const uploadAbortRef = useRef<AbortController | null>(null);
 
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [settingsSection, setSettingsSection] = useState<
+    "profile" | "privacy" | "plan" | "subscription" | "logout" | "delete"
+  >("profile");
+
 
   const [settingsSection, setSettingsSection] = useState<
     "profile" | "privacy" | "plan" | "subscription" | "logout" | "delete"
@@ -3178,9 +3182,10 @@ export default function Home() {
       {/* Settings Modal */}
       {showSettingsModal && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+
           <div
             className={cn(
-              "relative flex h-[78vh] w-full max-w-5xl overflow-hidden rounded-3xl shadow-2xl",
+              "relative h-[88vh] w-full max-w-5xl overflow-hidden rounded-3xl shadow-2xl md:h-[78vh] md:grid md:grid-cols-[280px_minmax(0,1fr)]",
               theme === "dark" ? "bg-slate-950 text-slate-100" : "bg-white text-slate-900"
             )}
           >
@@ -3194,25 +3199,26 @@ export default function Home() {
             >
               <X className="h-5 w-5" />
             </button>
-      
+
             {/* LEFT PANEL */}
             <div
               className={cn(
-                "flex w-[280px] shrink-0 flex-col border-r",
+                "flex flex-col border-b md:border-b-0 md:border-r",
                 theme === "dark" ? "border-slate-800 bg-slate-950" : "border-slate-200 bg-slate-50"
               )}
             >
-              <div className="border-b border-slate-200 px-5 py-5 dark:border-slate-800">
+              {/* Profile header */}
+              <div className="border-b border-slate-200 px-4 py-4 md:px-5 md:py-5 dark:border-slate-800">
                 <div className="flex items-center gap-3">
                   <div
                     className={cn(
-                      "flex h-11 w-11 items-center justify-center rounded-full text-white text-sm font-semibold uppercase",
+                      "flex h-11 w-11 items-center justify-center rounded-full text-white text-sm font-semibold uppercase shrink-0",
                       theme === "dark" ? "bg-slate-700" : "bg-slate-500"
                     )}
                   >
                     {(profile?.full_name || profile?.email || user?.email || "U").charAt(0)}
                   </div>
-      
+            
                   <div className="min-w-0">
                     <div className="truncate text-sm font-semibold">
                       {profile?.full_name || "User"}
@@ -3243,8 +3249,9 @@ export default function Home() {
                   </div>
                 </div>
               </div>
-      
-              <div className="flex-1 space-y-1 p-3">
+            
+              {/* Menu */}
+              <div className="flex gap-2 overflow-x-auto px-4 py-3 md:block md:w-[260px] md:space-y-1 md:overflow-visible md:px-3 md:py-4">
                 {[
                   { key: "profile", label: "Profile" },
                   { key: "privacy", label: "Privacy" },
@@ -3254,7 +3261,7 @@ export default function Home() {
                   { key: "delete", label: "Delete Account" },
                 ].map((item) => {
                   const active = settingsSection === item.key;
-      
+            
                   return (
                     <button
                       key={item.key}
@@ -3264,7 +3271,7 @@ export default function Home() {
                         )
                       }
                       className={cn(
-                        "w-full rounded-xl px-4 py-3 text-left text-sm font-medium transition",
+                        "shrink-0 rounded-xl px-4 py-3 text-left text-sm font-medium transition md:w-full",
                         active
                           ? theme === "dark"
                             ? "bg-slate-800 text-white"
@@ -3280,10 +3287,11 @@ export default function Home() {
                 })}
               </div>
             </div>
-      
+
+
             {/* RIGHT PANEL */}
-            <div className="flex-1 overflow-y-auto">
-              <div className="mx-auto max-w-3xl px-8 py-8">
+            <div className="min-w-0 flex-1 overflow-y-auto">
+              <div className="mx-auto max-w-3xl px-4 py-6 sm:px-6 md:px-8 md:py-8">
                 <div className="mb-6">
                   <h2 className="text-2xl font-bold">Settings</h2>
                   <p className={cn("mt-1 text-sm", theme === "dark" ? "text-slate-400" : "text-slate-500")}>
