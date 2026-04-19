@@ -3322,6 +3322,7 @@ export default function Home() {
                   </div>
                 )}
       
+                
                 {settingsSection === "privacy" && (
                   <div className="space-y-5">
                     <div
@@ -3330,14 +3331,61 @@ export default function Home() {
                         theme === "dark" ? "border-slate-800 bg-slate-900" : "border-slate-200 bg-white"
                       )}
                     >
-                      <div className="flex items-center gap-2 text-sm font-semibold">
-                        <Shield className="h-4 w-4" />
-                        Account deletion
+                      <div className="flex items-start gap-3">
+                        <div
+                          className={cn(
+                            "mt-0.5 rounded-xl p-2",
+                            theme === "dark" ? "bg-slate-800 text-slate-200" : "bg-slate-100 text-slate-700"
+                          )}
+                        >
+                          <Shield className="h-5 w-5" />
+                        </div>
+                
+                        <div className="min-w-0 flex-1">
+                          <h3 className="text-base font-semibold text-slate-900 dark:text-white">
+                            View our full Privacy Policy and Terms of Service.
+                          </h3>
+                
+                          <p
+                            className={cn(
+                              "mt-3 text-sm leading-7",
+                              theme === "dark" ? "text-slate-300" : "text-slate-600"
+                            )}
+                          >
+                            
+                          </p>
+                
+                          <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+                            <a
+                              href="/privacy"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className={cn(
+                                "inline-flex items-center justify-center rounded-xl px-4 py-2.5 text-sm font-medium transition",
+                                theme === "dark"
+                                  ? "bg-slate-800 text-white hover:bg-slate-700"
+                                  : "bg-slate-100 text-slate-900 hover:bg-slate-200"
+                              )}
+                            >
+                              View full Privacy Policy
+                            </a>
+                
+                            <a
+                              href="/terms"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className={cn(
+                                "inline-flex items-center justify-center rounded-xl px-4 py-2.5 text-sm font-medium transition",
+                                theme === "dark"
+                                  ? "border border-slate-700 text-slate-200 hover:bg-slate-800"
+                                  : "border border-slate-300 text-slate-700 hover:bg-slate-50"
+                              )}
+                            >
+                              View Terms of Service
+                            </a>
+                          </div>
+                        </div>
                       </div>
-                      <p className={cn("mt-3 text-sm leading-6", theme === "dark" ? "text-slate-300" : "text-slate-600")}>
-                        If you delete your account, your profile, documents, chat history, and study data are removed from the app.
-                        A limited record of your email may be retained only to prevent repeated free-trial abuse.
-                      </p>
                     </div>
                   </div>
                 )}
@@ -4079,14 +4127,75 @@ export default function Home() {
                             theme === "dark" ? "bg-slate-800" : "bg-slate-100"
                           )}
                         >
-                          <stat.icon className={cn("h-4 w-4", theme === "dark" ? "text-slate-300" : "text-slate-700")} />
+                          <stat.icon
+                            className={cn(
+                              "h-4 w-4",
+                              theme === "dark" ? "text-slate-300" : "text-slate-700"
+                            )}
+                          />
                         </div>
-                        <span className={cn("text-lg font-medium", theme === "dark" ? "text-slate-200" : "text-slate-700")}>
+                        <span
+                          className={cn(
+                            "text-lg font-medium",
+                            theme === "dark" ? "text-slate-200" : "text-slate-700"
+                          )}
+                        >
                           {stat.label}
                         </span>
                       </div>
                     ))}
                   </div>
+                  
+                  <div
+                    className={cn(
+                      "mt-8 border-t pt-5",
+                      theme === "dark" ? "border-slate-800" : "border-slate-200"
+                    )}
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <p
+                        className={cn(
+                          "text-sm",
+                          theme === "dark" ? "text-slate-400" : "text-slate-500"
+                        )}
+                      >
+                        © 2026 Grindx AI
+                      </p>
+                  
+                      <div
+                        className={cn(
+                          "flex flex-wrap items-center gap-4 text-sm",
+                          theme === "dark" ? "text-slate-400" : "text-slate-500"
+                        )}
+                      >
+                        <a
+                          href="/privacy"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={cn(
+                            "transition",
+                            theme === "dark" ? "hover:text-white" : "hover:text-slate-900"
+                          )}
+                        >
+                          Privacy Policy
+                        </a>
+                  
+                        <a
+                          href="/terms"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={cn(
+                            "transition",
+                            theme === "dark" ? "hover:text-white" : "hover:text-slate-900"
+                          )}
+                        >
+                          Terms of Service
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+
+
                 </div>
               </div>
             </div>
