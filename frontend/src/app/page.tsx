@@ -2750,7 +2750,7 @@ export default function Home() {
     if (!user) return;
   
     const confirmed = window.confirm(
-      "Delete your account permanently? Your profile, documents, chat history, and study data will be removed. A limited record of your email may be retained only to prevent repeated free-trial abuse."
+      "Delete your account permanently? Your profile, documents, chat history, and study data will be removed."
     );
   
     if (!confirmed) return;
@@ -2770,8 +2770,10 @@ export default function Home() {
       const res = await fetch(`${API}/account/delete`, {
         method: "POST",
         headers: {
+          "Content-Type": "application/json",
           Authorization: `Bearer ${accessToken}`,
         },
+        body: JSON.stringify({}),
       });
   
       const rawText = await res.text();
@@ -2804,6 +2806,7 @@ export default function Home() {
       setIsDeletingAccount(false);
     }
   };
+
 
 
   const tabs = [
@@ -3613,6 +3616,10 @@ export default function Home() {
 
                     </div>
                   )}
+
+
+
+
 
                 </div>
               )

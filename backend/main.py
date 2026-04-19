@@ -48,6 +48,7 @@ app.add_middleware(
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY", "")
 
 STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "")
 STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "")
@@ -1072,7 +1073,6 @@ async def stripe_webhook(request: Request):
 
     return {"received": True}
 
-
 @app.post("/account/delete")
 async def delete_account(request: Request):
     auth_header = request.headers.get("authorization", "")
@@ -1091,26 +1091,14 @@ async def delete_account(request: Request):
     if not user_id:
         raise HTTPException(status_code=400, detail="User id not found")
 
-    profile = get_profile_by_user_id(user_id) or {}
-    subscription_status = (profile.get("subscription_status") or "").lower()
-
-    has_used_trial = bool(
-        profile.get("trial_ends_at")
-        or profile.get("stripe_customer_id")
-        or subscription_status == "trialing"
-        or subscription_status == "active"
-    )
-
-    if email and has_used_trial:
-        retain_identity(email=email, reason="trial_used")
-
     try:
         delete_supabase_auth_user(user_id)
     except Exception as e:
         print("DELETE ACCOUNT ERROR:", str(e))
-        raise HTTPException(status_code=500, detail="Failed to delete account")
+        raise HTTPException(status_code=500, detail=f"Failed to delete account: {str(e)}")
 
     return {"success": True}
+
 
 @app.get("/")
 def root():
