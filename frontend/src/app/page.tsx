@@ -211,6 +211,10 @@ export default function Home() {
 
   const [showSettingsModal, setShowSettingsModal] = useState(false);
 
+  const [settingsSection, setSettingsSection] = useState<
+    "profile" | "privacy" | "plan" | "subscription" | "logout" | "delete"
+  >("profile");
+
   // RESTORE LIBRARY ON PAGE LOAD
 
   useEffect(() => {
@@ -324,7 +328,6 @@ export default function Home() {
   };
   
 
-
   const handleClearChatHistory = async () => {
     if (!activeId) return;
   
@@ -334,18 +337,16 @@ export default function Home() {
     const confirmed = window.confirm("Clear this chat history?");
     if (!confirmed) return;
   
+    const updatedItem = {
+      ...activeItem,
+      chatHistory: [],
+    };
+  
     setLibrary((prev) =>
-      prev.map((item) =>
-        item.id === activeId
-          ? {
-              ...item,
-              chatHistory: [],
-            }
-          : item
-      )
+      prev.map((item) => (item.id === activeId ? updatedItem : item))
     );
   
-    await replaceChatHistoryInCloud(activeItem, []);
+    await replaceChatHistoryInCloud(updatedItem, []);
   
     setQuestion("");
     setAnswer("");
@@ -358,7 +359,6 @@ export default function Home() {
       askIntervalRef.current = null;
     }
   };
-
 
 
 
@@ -536,6 +536,7 @@ export default function Home() {
     await replaceChatHistoryInCloud(item, item.chatHistory || []);
   };
 
+
   const deleteDocumentFromCloud = async (documentId: string) => {
     if (!user?.id || !documentId) return;
   
@@ -547,8 +548,10 @@ export default function Home() {
   
     if (error) {
       console.error("delete document failed:", error);
+      alert(`Delete failed: ${error.message}`);
     }
   };
+
 
 
   const syncAuthState = async (session: any) => {
@@ -2549,7 +2552,11 @@ export default function Home() {
 
 
   const handleDeleteItem = async (id: string) => {
+    const confirmed = window.confirm("Delete this document and its chat history?");
+    if (!confirmed) return;
+  
     setLibrary((prev) => prev.filter((item) => item.id !== id));
+  
     await deleteDocumentFromCloud(id);
   
     if (activeId === id) {
@@ -2754,7 +2761,7 @@ export default function Home() {
     if (!user) return;
   
     const confirmed = window.confirm(
-      "Delete your account permanently? Your profile, documents, chat history, and study data will be removed."
+      "Delete your account permanently? Your profile, documents, chat history, and study data will be removed. A limited record of your email may be retained only to prevent repeated free-trial abuse."
     );
   
     if (!confirmed) return;
@@ -3165,19 +3172,22 @@ export default function Home() {
         </div>
       )}
 
+
+
+
       {/* Settings Modal */}
       {showSettingsModal && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
           <div
             className={cn(
-              "relative w-full max-w-md rounded-2xl shadow-2xl overflow-hidden",
-              theme === "dark" ? "bg-slate-900 text-slate-100" : "bg-white text-slate-900"
+              "relative flex h-[78vh] w-full max-w-5xl overflow-hidden rounded-3xl shadow-2xl",
+              theme === "dark" ? "bg-slate-950 text-slate-100" : "bg-white text-slate-900"
             )}
           >
             <button
               onClick={() => setShowSettingsModal(false)}
               className={cn(
-                "absolute right-4 top-4 rounded-full p-2 transition-colors",
+                "absolute right-4 top-4 z-20 rounded-full p-2 transition-colors",
                 theme === "dark" ? "hover:bg-slate-800" : "hover:bg-slate-100"
               )}
               aria-label="Close settings"
@@ -3185,191 +3195,333 @@ export default function Home() {
               <X className="h-5 w-5" />
             </button>
       
-            <div className="border-b border-slate-200 bg-gradient-to-r from-blue-600 via-blue-700 to-teal-600 px-6 py-5 text-white">
-              <div className="flex items-center gap-3">
-                <div className="rounded-xl bg-white/15 p-2">
-                  <Settings className="h-5 w-5" />
+            {/* LEFT PANEL */}
+            <div
+              className={cn(
+                "flex w-[280px] shrink-0 flex-col border-r",
+                theme === "dark" ? "border-slate-800 bg-slate-950" : "border-slate-200 bg-slate-50"
+              )}
+            >
+              <div className="border-b border-slate-200 px-5 py-5 dark:border-slate-800">
+                <div className="flex items-center gap-3">
+                  <div
+                    className={cn(
+                      "flex h-11 w-11 items-center justify-center rounded-full text-white text-sm font-semibold uppercase",
+                      theme === "dark" ? "bg-slate-700" : "bg-slate-500"
+                    )}
+                  >
+                    {(profile?.full_name || profile?.email || user?.email || "U").charAt(0)}
+                  </div>
+      
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-semibold">
+                      {profile?.full_name || "User"}
+                    </div>
+                    <div
+                      className={cn(
+                        "truncate text-xs",
+                        theme === "dark" ? "text-slate-400" : "text-slate-500"
+                      )}
+                    >
+                      {profile?.email || user?.email}
+                    </div>
+                    <div className="mt-1 text-xs font-medium">
+                      <span
+                        className={
+                          isProUser
+                            ? "text-violet-500"
+                            : isPremiumUser
+                            ? "text-emerald-500"
+                            : theme === "dark"
+                            ? "text-slate-300"
+                            : "text-slate-600"
+                        }
+                      >
+                        {currentPlanLabel}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <h2 className="text-xl font-bold">Settings</h2>
-                  <p className="mt-1 text-sm text-blue-100">Manage your account and privacy</p>
-                </div>
+              </div>
+      
+              <div className="flex-1 space-y-1 p-3">
+                {[
+                  { key: "profile", label: "Profile" },
+                  { key: "privacy", label: "Privacy" },
+                  { key: "plan", label: "Plan" },
+                  { key: "subscription", label: "Subscription" },
+                  { key: "logout", label: "Log Out" },
+                  { key: "delete", label: "Delete Account" },
+                ].map((item) => {
+                  const active = settingsSection === item.key;
+      
+                  return (
+                    <button
+                      key={item.key}
+                      onClick={() =>
+                        setSettingsSection(
+                          item.key as "profile" | "privacy" | "plan" | "subscription" | "logout" | "delete"
+                        )
+                      }
+                      className={cn(
+                        "w-full rounded-xl px-4 py-3 text-left text-sm font-medium transition",
+                        active
+                          ? theme === "dark"
+                            ? "bg-slate-800 text-white"
+                            : "bg-slate-200 text-slate-900"
+                          : theme === "dark"
+                          ? "text-slate-300 hover:bg-slate-900 hover:text-white"
+                          : "text-slate-700 hover:bg-slate-100"
+                      )}
+                    >
+                      {item.label}
+                    </button>
+                  );
+                })}
               </div>
             </div>
       
-            <div className="space-y-4 px-6 py-5">
-              <div>
-                <div className={cn("text-xs font-semibold uppercase tracking-wide", theme === "dark" ? "text-slate-400" : "text-slate-500")}>
-                  Profile
-                </div>
-                <div className="mt-2 rounded-xl border border-slate-200 px-4 py-3">
-                  <div className="text-sm font-semibold">
-                    {profile?.full_name || "User"}
-                  </div>
-                  <div className={cn("mt-1 text-sm", theme === "dark" ? "text-slate-300" : "text-slate-600")}>
-                    {profile?.email || user?.email}
-                  </div>
-                </div>
-              </div>
-      
-              <div>
-                <div className={cn("text-xs font-semibold uppercase tracking-wide", theme === "dark" ? "text-slate-400" : "text-slate-500")}>
-                  Privacy
-                </div>
-                <div className="mt-2 rounded-xl border border-slate-200 px-4 py-3 text-sm leading-6">
-                  <div className="flex items-center gap-2 font-semibold">
-                    <Shield className="h-4 w-4" />
-                    Account deletion
-                  </div>
-                  <p className={cn("mt-2", theme === "dark" ? "text-slate-300" : "text-slate-600")}>
-                    If you delete your account, your profile, documents, chat history, and study data are removed from the app.
-                    A limited record of your email may be retained only to prevent repeated free-trial abuse.
+            {/* RIGHT PANEL */}
+            <div className="flex-1 overflow-y-auto">
+              <div className="mx-auto max-w-3xl px-8 py-8">
+                <div className="mb-6">
+                  <h2 className="text-2xl font-bold">Settings</h2>
+                  <p className={cn("mt-1 text-sm", theme === "dark" ? "text-slate-400" : "text-slate-500")}>
+                    Manage your account and privacy
                   </p>
                 </div>
-              </div>
       
-              <div>
-                <div className={cn("text-xs font-semibold uppercase tracking-wide", theme === "dark" ? "text-slate-400" : "text-slate-500")}>
-                  Plan
-                </div>
-                <div className="mt-2 rounded-xl border border-slate-200 px-4 py-3">
-                  <div className="text-sm font-semibold">
-                    Current plan:{" "}
-                    <span
-                      className={
-                        isProUser
-                          ? "text-violet-600"
-                          : isPremiumUser
-                          ? "text-emerald-600"
-                          : theme === "dark"
-                          ? "text-slate-200"
-                          : "text-slate-700"
-                      }
+                {settingsSection === "profile" && (
+                  <div className="space-y-5">
+                    <div
+                      className={cn(
+                        "rounded-2xl border p-5",
+                        theme === "dark" ? "border-slate-800 bg-slate-900" : "border-slate-200 bg-white"
+                      )}
                     >
-                      {currentPlanLabel}
-                    </span>
-                  </div>
-      
-                  {subscriptionStatus === "trialing" &&
-                    profile?.subscription_cancel_at_period_end &&
-                    (profile?.plan_ends_at || profile?.trial_ends_at) && (
-                      <div className="mt-1 text-xs text-orange-600">
-                        Trial cancels on {formatPlanDate(profile?.plan_ends_at || profile?.trial_ends_at)}
+                      <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        Profile
                       </div>
-                  )}
-      
-                  {subscriptionStatus === "trialing" &&
-                    !profile?.subscription_cancel_at_period_end &&
-                    (profile?.plan_ends_at || profile?.trial_ends_at) && (
-                      <div className="mt-1 text-xs text-amber-600">
-                        Trial ends on {formatPlanDate(profile?.plan_ends_at || profile?.trial_ends_at)}
+                      <div className="mt-4 space-y-3">
+                        <div>
+                          <div className="text-sm font-semibold">
+                            {profile?.full_name || "User"}
+                          </div>
+                          <div className={cn("mt-1 text-sm", theme === "dark" ? "text-slate-300" : "text-slate-600")}>
+                            {profile?.email || user?.email}
+                          </div>
+                        </div>
                       </div>
-                  )}
-      
-                  {subscriptionStatus === "active" &&
-                    profile?.subscription_cancel_at_period_end &&
-                    profile?.plan_ends_at && (
-                      <div className="mt-1 text-xs text-orange-600">
-                        Cancels on {formatPlanDate(profile.plan_ends_at)}
-                      </div>
-                  )}
-      
-                  {!hasPaidPlan && canShowTrialEntry && (
-                    <div className="mt-1 text-xs text-blue-600">
-                      7-day Premium trial available
                     </div>
-                  )}
-                </div>
-              </div>
-      
-              <div className="space-y-2">
-                <button
-                  onClick={() => {
-                    setShowSettingsModal(false);
-                    setShowPlansModal(true);
-                  }}
-                  className={cn(
-                    "w-full rounded-xl border px-4 py-3 text-sm font-semibold transition",
-                    theme === "dark"
-                      ? "border-slate-700 bg-slate-800 text-slate-100 hover:bg-slate-700"
-                      : "border-slate-300 bg-white text-slate-800 hover:bg-slate-50"
-                  )}
-                >
-                  See Plans
-                </button>
-      
-                {hasPaidPlan && (
-                  <button
-                    onClick={handleManageSubscription}
-                    disabled={isBillingLoading}
-                    className={cn(
-                      "w-full rounded-xl border px-4 py-3 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-70",
-                      theme === "dark"
-                        ? "border-slate-700 bg-slate-800 text-slate-100 hover:bg-slate-700"
-                        : "border-slate-300 bg-white text-slate-800 hover:bg-slate-50"
-                    )}
-                  >
-                    {isBillingLoading ? "Please wait..." : "Manage Subscription"}
-                  </button>
-                )}
-      
-                {hasPaidPlan && !profile?.subscription_cancel_at_period_end && (
-                  <button
-                    onClick={handleCancelSubscription}
-                    disabled={isBillingLoading}
-                    className={cn(
-                      "w-full rounded-xl border px-4 py-3 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-70",
-                      theme === "dark"
-                        ? "border-rose-900 bg-rose-950/40 text-rose-300 hover:bg-rose-950/60"
-                        : "border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100"
-                    )}
-                  >
-                    {isBillingLoading ? "Please wait..." : "Cancel Subscription"}
-                  </button>
-                )}
-      
-                {hasPaidPlan && profile?.subscription_cancel_at_period_end && (
-                  <div
-                    className={cn(
-                      "w-full rounded-xl border px-4 py-3 text-center text-sm font-semibold",
-                      theme === "dark"
-                        ? "border-amber-900 bg-amber-950/40 text-amber-300"
-                        : "border-amber-200 bg-amber-50 text-amber-700"
-                    )}
-                  >
-                    Cancellation Scheduled
                   </div>
                 )}
       
-                <button
-                  onClick={handleSignOut}
-                  className={cn(
-                    "w-full rounded-xl border px-4 py-3 text-sm font-semibold transition",
-                    theme === "dark"
-                      ? "border-slate-700 bg-slate-800 text-slate-100 hover:bg-slate-700"
-                      : "border-slate-300 bg-white text-slate-800 hover:bg-slate-50"
-                  )}
-                >
-                  Log Out
-                </button>
+                {settingsSection === "privacy" && (
+                  <div className="space-y-5">
+                    <div
+                      className={cn(
+                        "rounded-2xl border p-5",
+                        theme === "dark" ? "border-slate-800 bg-slate-900" : "border-slate-200 bg-white"
+                      )}
+                    >
+                      <div className="flex items-center gap-2 text-sm font-semibold">
+                        <Shield className="h-4 w-4" />
+                        Account deletion
+                      </div>
+                      <p className={cn("mt-3 text-sm leading-6", theme === "dark" ? "text-slate-300" : "text-slate-600")}>
+                        If you delete your account, your profile, documents, chat history, and study data are removed from the app.
+                        A limited record of your email may be retained only to prevent repeated free-trial abuse.
+                      </p>
+                    </div>
+                  </div>
+                )}
       
-                <button
-                  onClick={handleDeleteAccount}
-                  disabled={isDeletingAccount}
-                  className={cn(
-                    "w-full rounded-xl border px-4 py-3 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-70",
-                    theme === "dark"
-                      ? "border-red-800 bg-red-950/50 text-red-300 hover:bg-red-950/70"
-                      : "border-red-300 bg-red-50 text-red-700 hover:bg-red-100"
-                  )}
-                >
-                  {isDeletingAccount ? "Deleting Account..." : "Delete Account"}
-                </button>
+                {settingsSection === "plan" && (
+                  <div className="space-y-5">
+                    <div
+                      className={cn(
+                        "rounded-2xl border p-5",
+                        theme === "dark" ? "border-slate-800 bg-slate-900" : "border-slate-200 bg-white"
+                      )}
+                    >
+                      <div className="text-sm font-semibold">
+                        Current plan:{" "}
+                        <span
+                          className={
+                            isProUser
+                              ? "text-violet-500"
+                              : isPremiumUser
+                              ? "text-emerald-500"
+                              : theme === "dark"
+                              ? "text-slate-200"
+                              : "text-slate-700"
+                          }
+                        >
+                          {currentPlanLabel}
+                        </span>
+                      </div>
+      
+                      {subscriptionStatus === "trialing" &&
+                        profile?.subscription_cancel_at_period_end &&
+                        (profile?.plan_ends_at || profile?.trial_ends_at) && (
+                          <div className="mt-2 text-sm text-orange-600">
+                            Trial cancels on {formatPlanDate(profile?.plan_ends_at || profile?.trial_ends_at)}
+                          </div>
+                      )}
+      
+                      {subscriptionStatus === "trialing" &&
+                        !profile?.subscription_cancel_at_period_end &&
+                        (profile?.plan_ends_at || profile?.trial_ends_at) && (
+                          <div className="mt-2 text-sm text-amber-600">
+                            Trial ends on {formatPlanDate(profile?.plan_ends_at || profile?.trial_ends_at)}
+                          </div>
+                      )}
+      
+                      {subscriptionStatus === "active" &&
+                        profile?.subscription_cancel_at_period_end &&
+                        profile?.plan_ends_at && (
+                          <div className="mt-2 text-sm text-orange-600">
+                            Cancels on {formatPlanDate(profile.plan_ends_at)}
+                          </div>
+                      )}
+      
+                      {!hasPaidPlan && canShowTrialEntry && (
+                        <div className="mt-2 text-sm text-blue-600">
+                          7-day Premium trial available
+                        </div>
+                      )}
+      
+                      <button
+                        onClick={() => {
+                          setShowSettingsModal(false);
+                          setShowPlansModal(true);
+                        }}
+                        className={cn(
+                          "mt-5 w-full rounded-xl border px-4 py-3 text-sm font-semibold transition",
+                          theme === "dark"
+                            ? "border-slate-700 bg-slate-800 text-slate-100 hover:bg-slate-700"
+                            : "border-slate-300 bg-white text-slate-800 hover:bg-slate-50"
+                        )}
+                      >
+                        See Plans
+                      </button>
+                    </div>
+                  </div>
+                )}
+      
+                {settingsSection === "subscription" && (
+                  <div className="space-y-3">
+                    {hasPaidPlan ? (
+                      <>
+                        <button
+                          onClick={handleManageSubscription}
+                          disabled={isBillingLoading}
+                          className={cn(
+                            "w-full rounded-xl border px-4 py-3 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-70",
+                            theme === "dark"
+                              ? "border-slate-700 bg-slate-800 text-slate-100 hover:bg-slate-700"
+                              : "border-slate-300 bg-white text-slate-800 hover:bg-slate-50"
+                          )}
+                        >
+                          {isBillingLoading ? "Please wait..." : "Manage Subscription"}
+                        </button>
+      
+                        {!profile?.subscription_cancel_at_period_end ? (
+                          <button
+                            onClick={handleCancelSubscription}
+                            disabled={isBillingLoading}
+                            className={cn(
+                              "w-full rounded-xl border px-4 py-3 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-70",
+                              theme === "dark"
+                                ? "border-rose-900 bg-rose-950/40 text-rose-300 hover:bg-rose-950/60"
+                                : "border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100"
+                            )}
+                          >
+                            {isBillingLoading ? "Please wait..." : "Cancel Subscription"}
+                          </button>
+                        ) : (
+                          <div
+                            className={cn(
+                              "w-full rounded-xl border px-4 py-3 text-center text-sm font-semibold",
+                              theme === "dark"
+                                ? "border-amber-900 bg-amber-950/40 text-amber-300"
+                                : "border-amber-200 bg-amber-50 text-amber-700"
+                            )}
+                          >
+                            Cancellation Scheduled
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <div
+                        className={cn(
+                          "rounded-2xl border p-5 text-sm",
+                          theme === "dark" ? "border-slate-800 bg-slate-900 text-slate-300" : "border-slate-200 bg-white text-slate-600"
+                        )}
+                      >
+                        No active paid subscription.
+                      </div>
+                    )}
+                  </div>
+                )}
+      
+                {settingsSection === "logout" && (
+                  <div className="space-y-4">
+                    <div
+                      className={cn(
+                        "rounded-2xl border p-5 text-sm",
+                        theme === "dark" ? "border-slate-800 bg-slate-900 text-slate-300" : "border-slate-200 bg-white text-slate-600"
+                      )}
+                    >
+                      Sign out from this device.
+                    </div>
+      
+                    <button
+                      onClick={handleSignOut}
+                      className={cn(
+                        "w-full rounded-xl border px-4 py-3 text-sm font-semibold transition",
+                        theme === "dark"
+                          ? "border-slate-700 bg-slate-800 text-slate-100 hover:bg-slate-700"
+                          : "border-slate-300 bg-white text-slate-800 hover:bg-slate-50"
+                      )}
+                    >
+                      Log Out
+                    </button>
+                  </div>
+                )}
+      
+                {settingsSection === "delete" && (
+                  <div className="space-y-4">
+                    <div
+                      className={cn(
+                        "rounded-2xl border p-5 text-sm leading-6",
+                        theme === "dark" ? "border-red-900 bg-red-950/30 text-red-200" : "border-red-200 bg-red-50 text-red-700"
+                      )}
+                    >
+                      Delete your account permanently. Your profile, documents, chat history, and study data will be removed.
+                    </div>
+      
+                    <button
+                      onClick={handleDeleteAccount}
+                      disabled={isDeletingAccount}
+                      className={cn(
+                        "w-full rounded-xl border px-4 py-3 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-70",
+                        theme === "dark"
+                          ? "border-red-800 bg-red-950/50 text-red-300 hover:bg-red-950/70"
+                          : "border-red-300 bg-red-50 text-red-700 hover:bg-red-100"
+                      )}
+                    >
+                      {isDeletingAccount ? "Deleting Account..." : "Delete Account"}
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
         </div>
       )}
+
+
 
       {/* Auth Modal */}
       {showAuthModal && (
@@ -3656,17 +3808,11 @@ export default function Home() {
             }}
             onRenameItem={handleRename}
             onDeleteItem={handleDeleteItem}
+
+
             bottomContent={
               user && (
-                <div
-                  className={cn(
-                    "px-1.5 py-1 transition-colors duration-300",
-                    theme === "dark"
-                      ? "bg-transparent"
-                      : "bg-transparent"
-                  )}
-                >
-
+                <div className="px-1.5 py-1 transition-colors duration-300">
                   <div className="flex items-start gap-1.5">
                     <div
                       className={cn(
@@ -3674,7 +3820,6 @@ export default function Home() {
                         theme === "dark" ? "bg-transparent" : "bg-transparent"
                       )}
                     >
-
                       <div
                         className={cn(
                           "flex h-6 w-6 items-center justify-center rounded-full text-white text-[9px] font-semibold uppercase shrink-0",
@@ -3683,7 +3828,7 @@ export default function Home() {
                       >
                         {(profile?.full_name || profile?.email || user.email || "U").charAt(0)}
                       </div>
-              
+            
                       <div className="min-w-0 flex-1">
                         <div
                           className={cn(
@@ -3693,23 +3838,7 @@ export default function Home() {
                         >
                           {profile?.full_name || profile?.email || user.email}
                         </div>
-              
-                        <div className="mt-2">
-                          <button
-                            onClick={() => setShowSettingsModal(true)}
-                            className={cn(
-                              "w-full rounded-md border px-2 py-2 text-[11px] font-semibold transition flex items-center justify-center gap-2",
-                              theme === "dark"
-                                ? "border-slate-700 bg-slate-800 text-slate-100 hover:bg-slate-700"
-                                : "border-slate-300 bg-white text-slate-800 hover:bg-slate-50"
-                            )}
-                          >
-                            <Settings className="h-3.5 w-3.5" />
-                            Settings
-                          </button>
-                        </div>
-
-
+            
                         <div
                           className={cn(
                             "mt-0.5 text-[9px] font-medium leading-3.5",
@@ -3731,8 +3860,7 @@ export default function Home() {
                             {currentPlanLabel}
                           </span>
                         </div>
-              
-
+            
                         {subscriptionStatus === "trialing" &&
                           profile?.subscription_cancel_at_period_end &&
                           (profile?.plan_ends_at || profile?.trial_ends_at) && (
@@ -3740,7 +3868,7 @@ export default function Home() {
                               Trial cancels on {formatPlanDate(profile?.plan_ends_at || profile?.trial_ends_at)}
                             </div>
                         )}
-                        
+            
                         {subscriptionStatus === "trialing" &&
                           !profile?.subscription_cancel_at_period_end &&
                           (profile?.plan_ends_at || profile?.trial_ends_at) && (
@@ -3748,8 +3876,7 @@ export default function Home() {
                               Trial ends on {formatPlanDate(profile?.plan_ends_at || profile?.trial_ends_at)}
                             </div>
                         )}
-
-
+            
                         {subscriptionStatus === "active" &&
                           profile?.subscription_cancel_at_period_end &&
                           profile?.plan_ends_at && (
@@ -3757,26 +3884,37 @@ export default function Home() {
                               Cancels on {formatPlanDate(profile.plan_ends_at)}
                             </div>
                         )}
-
-             
-              
+            
                         {!hasPaidPlan && canShowTrialEntry && (
                           <div className="mt-0.5 text-[9px] leading-3.5 text-blue-600">
                             7-day Premium trial available
                           </div>
                         )}
+            
+
+                        <button
+                          onClick={() => {
+                            setSettingsSection("profile");
+                            setShowSettingsModal(true);
+                          }}
+                          className={cn(
+                            "mt-2 flex w-full items-center justify-start gap-2 rounded-md border-0 bg-transparent px-0 py-0 text-left text-[12px] font-semibold transition shadow-none",
+                            theme === "dark"
+                              ? "text-slate-100 hover:bg-transparent"
+                              : "text-slate-800 hover:bg-transparent"
+                          )}
+                        >
+                          <Settings className="h-3.5 w-3.5 shrink-0" />
+                          <span>Settings</span>
+                        </button>
+
                       </div>
                     </div>
                   </div>
-              
-
-
-
-
-
                 </div>
               )
             }
+
           />
         }
         rightPanel={desktopStudyPanel}
