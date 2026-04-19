@@ -209,15 +209,13 @@ export default function Home() {
 
   const uploadAbortRef = useRef<AbortController | null>(null);
 
+
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [settingsSection, setSettingsSection] = useState<
     "profile" | "privacy" | "plan" | "subscription" | "logout" | "delete"
   >("profile");
 
 
-  const [settingsSection, setSettingsSection] = useState<
-    "profile" | "privacy" | "plan" | "subscription" | "logout" | "delete"
-  >("profile");
 
   // RESTORE LIBRARY ON PAGE LOAD
 
