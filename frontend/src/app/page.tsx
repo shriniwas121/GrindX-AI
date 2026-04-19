@@ -3978,9 +3978,10 @@ export default function Home() {
           
           {!activeId ? (
             <div className="h-full flex flex-col p-2 sm:p-3 lg:p-1">
+
               <div
                 className={cn(
-                  "flex-1 min-h-0 overflow-y-auto rounded-[28px] border shadow-sm px-4 py-5 sm:px-6 sm:py-6 transition-colors duration-300",
+                  "flex-1 min-h-0 overflow-y-auto rounded-[28px] border shadow-sm px-4 pt-5 pb-28 sm:px-6 sm:pt-6 sm:pb-6 transition-colors duration-300",
                   theme === "dark"
                     ? "bg-slate-900 border-slate-500"
                     : "bg-white border-slate-300"
