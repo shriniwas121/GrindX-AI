@@ -2745,6 +2745,7 @@ export default function Home() {
     }
   };
 
+
   const handleDeleteAccount = async () => {
     if (!user) return;
   
@@ -2773,10 +2774,17 @@ export default function Home() {
         },
       });
   
-      const data = await res.json().catch(() => null);
+      const rawText = await res.text();
+      let data: any = null;
+  
+      try {
+        data = rawText ? JSON.parse(rawText) : null;
+      } catch {
+        data = null;
+      }
   
       if (!res.ok) {
-        throw new Error(data?.detail || "Failed to delete account.");
+        throw new Error(data?.detail || rawText || "Failed to delete account.");
       }
   
       clearWorkspaceState();
@@ -3546,7 +3554,7 @@ export default function Home() {
                       >
                         See Plans
                       </button>
-
+                  
                       {hasPaidPlan && (
                         <>
                           <button
@@ -3561,7 +3569,7 @@ export default function Home() {
                           >
                             {isBillingLoading ? "Please wait..." : "Manage Subscription"}
                           </button>
-                      
+                  
                           {!profile?.subscription_cancel_at_period_end ? (
                             <button
                               onClick={handleCancelSubscription}
@@ -3575,7 +3583,6 @@ export default function Home() {
                             >
                               {isBillingLoading ? "Please wait..." : "Cancel Subscription"}
                             </button>
-
                           ) : (
                             <div
                               className={cn(
@@ -3588,26 +3595,25 @@ export default function Home() {
                               Cancellation Scheduled
                             </div>
                           )}
-
-                          <button
-                            onClick={handleDeleteAccount}
-                            disabled={isDeletingAccount}
-                            className={cn(
-                              "w-full rounded-md border px-2 py-1 text-[11px] font-semibold transition disabled:cursor-not-allowed disabled:opacity-70",
-                              theme === "dark"
-                                ? "border-rose-900 bg-rose-950/40 text-rose-300 hover:bg-rose-950/60"
-                                : "border-rose-300 bg-rose-50 text-rose-700 hover:bg-rose-100"
-                            )}
-                          >
-                            {isDeletingAccount ? "Deleting Account..." : "Delete Account"}
-                          </button>
-
-
                         </>
-                      )}              
+                      )}
+                  
+                      <button
+                        onClick={handleDeleteAccount}
+                        disabled={isDeletingAccount}
+                        className={cn(
+                          "w-full rounded-md border px-2 py-1 text-[11px] font-semibold transition disabled:cursor-not-allowed disabled:opacity-70",
+                          theme === "dark"
+                            ? "border-red-700 bg-red-950/70 text-red-200 hover:bg-red-900/80"
+                            : "border-red-300 bg-red-50 text-red-700 hover:bg-red-100"
+                        )}
+                      >
+                        {isDeletingAccount ? "Deleting Account..." : "Delete Account"}
+                      </button>
+
                     </div>
                   )}
-              
+
                 </div>
               )
             }
