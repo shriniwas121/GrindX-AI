@@ -6,17 +6,36 @@ export const metadata = {
 export default function PrivacyPage() {
   return (
     <main className="min-h-screen bg-slate-50 text-slate-900">
-      <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6 lg:px-8">
-        <div className="rounded-3xl border border-slate-200 bg-white shadow-sm">
-          <div className="border-b border-slate-200 px-6 py-6 sm:px-8">
-            <h1 className="text-3xl font-bold tracking-tight">Privacy Policy</h1>
-            <p className="mt-2 text-sm text-slate-500">
-              Effective date: 19 April 2026
-            </p>
+      <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8 lg:py-12">
+        <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+          <div className="border-b border-slate-200 bg-slate-50/70 px-6 py-8 sm:px-8 sm:py-10">
+            <div className="max-w-3xl">
+              <p className="text-sm font-medium uppercase tracking-[0.18em] text-slate-500">
+                Grindx AI
+              </p>
+              <h1 className="mt-3 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+                Privacy Policy
+              </h1>
+              <p className="mt-3 text-sm text-slate-500 sm:text-base">
+                Effective date: 19 April 2026
+              </p>
+            </div>
           </div>
 
-          <div className="px-6 py-8 sm:px-8">
-            <div className="prose prose-slate max-w-none prose-headings:scroll-mt-24">
+          <div className="px-6 py-8 sm:px-8 sm:py-10 lg:px-10">
+            <div
+              className="
+                max-w-none text-[15px] leading-7 text-slate-700
+                [&_h2]:mt-12 [&_h2]:mb-4 [&_h2]:border-t [&_h2]:border-slate-200 [&_h2]:pt-8
+                [&_h2]:text-2xl [&_h2]:font-semibold [&_h2]:tracking-tight [&_h2]:text-slate-900
+                [&_h2:first-of-type]:mt-0 [&_h2:first-of-type]:border-t-0 [&_h2:first-of-type]:pt-0
+                [&_h3]:mt-8 [&_h3]:mb-3 [&_h3]:text-lg [&_h3]:font-semibold [&_h3]:text-slate-900
+                [&_p]:my-4
+                [&_ul]:my-4 [&_ul]:space-y-2 [&_ul]:pl-6
+                [&_li]:pl-1
+                [&_strong]:font-semibold [&_strong]:text-slate-900
+              "
+            >
               <p>
                 Grindx AI (“we”, “us”, “our”) provides an AI-powered study
                 assistant that helps users upload study materials, generate
@@ -43,7 +62,10 @@ export default function PrivacyPage() {
               </ul>
 
               <h3>B. Study Content You Provide</h3>
-              <p>When you use Grindx AI, we may collect content you actively submit, including:</p>
+              <p>
+                When you use Grindx AI, we may collect content you actively
+                submit, including:
+              </p>
               <ul>
                 <li>Uploaded files such as PDF, Word, text, and image files</li>
                 <li>Pasted text</li>
@@ -146,16 +168,20 @@ export default function PrivacyPage() {
               <p>We may share information:</p>
               <ul>
                 <li>With service providers that help us operate the app</li>
-                <li>With payment processors for subscription and billing operations</li>
                 <li>
-                  When required by law, regulation, legal process, or governmental request
+                  With payment processors for subscription and billing operations
                 </li>
                 <li>
-                  To protect the rights, safety, security, and integrity of Grindx AI,
-                  our users, or others
+                  When required by law, regulation, legal process, or
+                  governmental request
                 </li>
                 <li>
-                  In connection with a business transfer, merger, acquisition, or asset sale
+                  To protect the rights, safety, security, and integrity of
+                  Grindx AI, our users, or others
+                </li>
+                <li>
+                  In connection with a business transfer, merger, acquisition, or
+                  asset sale
                 </li>
               </ul>
 
@@ -208,7 +234,10 @@ export default function PrivacyPage() {
               <ul>
                 <li>Delete documents and chat history within the app</li>
                 <li>Delete your account through the app or by contacting us</li>
-                <li>Manage or cancel subscriptions through the available billing controls</li>
+                <li>
+                  Manage or cancel subscriptions through the available billing
+                  controls
+                </li>
               </ul>
 
               <h2>8. Security</h2>
@@ -244,14 +273,18 @@ export default function PrivacyPage() {
               </p>
 
               <h2>12. Contact Us</h2>
-              <p>If you have questions or requests regarding this Privacy Policy, contact:</p>
               <p>
-                <strong>INSIGHTX DATA &amp; AI SOLUTIONS</strong>
-                <br />
-                Email: info@insightxai.com.au
-                <br />
-                Website: https://grindx.insightxai.com.au
+                If you have questions or requests regarding this Privacy Policy,
+                contact:
               </p>
+
+              <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-slate-700">
+                <p className="m-0">
+                  <strong>INSIGHTX DATA &amp; AI SOLUTIONS</strong>
+                </p>
+                <p className="mt-2 mb-0">Email: info@insightxai.com.au</p>
+                <p className="mt-2 mb-0">Website: https://grindx.insightxai.com.au</p>
+              </div>
             </div>
           </div>
         </div>
