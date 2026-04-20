@@ -2953,33 +2953,34 @@ export default function Home() {
 
             <button
               onClick={() => setShowPlansModal(false)}
-              className="absolute right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/15 text-white shadow-sm ring-1 ring-white/30 transition hover:bg-white/25 hover:text-white"
+              className="absolute right-4 top-4 z-10 flex h-8 w-10 items-center justify-center rounded-full bg-white/15 text-white shadow-sm ring-1 ring-white/30 transition hover:bg-white/25 hover:text-white"
               aria-label="Close plans modal"
             >
               <X className="h-5 w-5" />
             </button>
 
 
-            <div className="border-b border-slate-200 bg-gradient-to-r from-blue-600 via-blue-700 to-teal-600 px-6 py-6 text-white md:px-8">
+            <div className="border-b border-slate-200 bg-gradient-to-r from-blue-600 via-blue-700 to-teal-600 px-6 py-4 text-white md:px-7">
               <div className="flex items-center gap-3">
                 <div className="rounded-2xl bg-white/15 p-2">
                   <Sparkles className="h-5 w-5" />
                 </div>
                 <div>
-                  <h2 className="text-2xl font-bold">Choose your plan</h2>
+                  <h2 className="text-xl font-bold md:text-2xl">Choose your plan</h2>
                   <p className="mt-1 text-sm text-blue-100">
-                    Start free, upgrade only when you need more power. Local currency may be shown at checkout where supported.
+                    Start free, upgrade only when you need more power.
                   </p>
                 </div>
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto grid gap-5 p-4 md:grid-cols-3 md:p-8">
+
+            <div className="flex-1 overflow-y-auto grid gap-5 p-4 md:grid-cols-3 md:p-6">
               {/* Free */}
               <div className="flex flex-col rounded-2xl border border-slate-200 bg-slate-50/70 p-5">
                 <div className="mb-4">
                   <div className="text-sm font-semibold text-slate-500">Free</div>
-                  <div className="mt-2 text-3xl font-bold text-slate-900">A$0</div>
+                  <div className="mt-2 text-2xl font-bold text-slate-900">A$0</div>
                   <div className="mt-1 text-sm text-slate-500">Good for getting started</div>
                 </div>
 
@@ -3022,7 +3023,7 @@ export default function Home() {
 
                 <div className="mb-4">
                   <div className="text-sm font-semibold text-emerald-600">Premium</div>
-                  <div className="mt-2 text-3xl font-bold text-slate-900">A$5.99</div>
+                  <div className="mt-2 text-2xl font-bold text-slate-900">A$5.99</div>
                   <div className="mt-1 text-sm text-slate-500">per month</div>
                 </div>
 
@@ -3104,7 +3105,7 @@ export default function Home() {
               <div className="flex flex-col rounded-2xl border border-violet-200 bg-violet-50/40 p-5">
                 <div className="mb-4">
                   <div className="text-sm font-semibold text-violet-600">Pro</div>
-                  <div className="mt-2 text-3xl font-bold text-slate-900">A$14.99</div>
+                  <div className="mt-2 text-2xl font-bold text-slate-900">A$14.99</div>
                   <div className="mt-1 text-sm text-slate-500">per month</div>
                 </div>
 
@@ -3167,8 +3168,15 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="border-t border-slate-200 bg-slate-50 px-6 py-4 text-center text-xs text-slate-500 md:px-8">
-              Cancel anytime. Paid plans stay active until the current billing period ends.
+            <div className="border-t border-slate-200 bg-slate-50 px-6 py-0 text-center text-xs text-slate-500 md:px-8">
+              <div className="border-t border-slate-200 bg-slate-50 px-1 py-1 text-center md:px-8">
+                <p className="mb-1 text-xs text-slate-500">
+                  Local currency may be shown at checkout where supported.
+                </p>
+                <p className="text-xs text-slate-500">
+                  Cancel anytime. Paid plans stay active until the current billing period ends.
+                </p>
+              </div>
             </div>
           </div>
         </div>
