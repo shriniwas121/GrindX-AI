@@ -2979,7 +2979,7 @@ export default function Home() {
               <div className="flex flex-col rounded-2xl border border-slate-200 bg-slate-50/70 p-5">
                 <div className="mb-4">
                   <div className="text-sm font-semibold text-slate-500">Free</div>
-                  <div className="mt-2 text-3xl font-bold text-slate-900">$0</div>
+                  <div className="mt-2 text-3xl font-bold text-slate-900">AUD$0</div>
                   <div className="mt-1 text-sm text-slate-500">Good for getting started</div>
                 </div>
 
@@ -3022,7 +3022,7 @@ export default function Home() {
 
                 <div className="mb-4">
                   <div className="text-sm font-semibold text-emerald-600">Premium</div>
-                  <div className="mt-2 text-3xl font-bold text-slate-900">$5.99</div>
+                  <div className="mt-2 text-3xl font-bold text-slate-900">AUD$5.99</div>
                   <div className="mt-1 text-sm text-slate-500">per month</div>
                 </div>
 
@@ -3104,7 +3104,7 @@ export default function Home() {
               <div className="flex flex-col rounded-2xl border border-violet-200 bg-violet-50/40 p-5">
                 <div className="mb-4">
                   <div className="text-sm font-semibold text-violet-600">Pro</div>
-                  <div className="mt-2 text-3xl font-bold text-slate-900">$14.99</div>
+                  <div className="mt-2 text-3xl font-bold text-slate-900">AUD$14.99</div>
                   <div className="mt-1 text-sm text-slate-500">per month</div>
                 </div>
 
