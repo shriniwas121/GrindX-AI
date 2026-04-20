@@ -915,40 +915,81 @@ async def create_checkout_session(request: Request):
     if plan not in {"premium", "pro"}:
         raise HTTPException(status_code=400, detail="Invalid plan")
 
-    customer_id = get_or_create_stripe_customer(user_id, email)
 
     selected_price_id = STRIPE_PRICE_ID_PREMIUM if plan == "premium" else STRIPE_PRICE_ID_PRO
-
-
+    
     subscription_data = {
         "metadata": {
             "user_id": user_id,
             "plan": plan,
         },
     }
-
+    
     if plan == "premium":
         already_used_trial = retained_identity_exists(email) if email else False
         if not already_used_trial:
             subscription_data["trial_period_days"] = 7
-
-
-
-
-    session = stripe.checkout.Session.create(
-        mode="subscription",
-        customer=customer_id,
-        line_items=[
+    
+    checkout_kwargs = {
+        "mode": "subscription",
+        "line_items": [
             {
                 "price": selected_price_id,
                 "quantity": 1,
             }
         ],
-        subscription_data=subscription_data,
-        success_url=f"{FRONTEND_BASE_URL}?billing=success",
-        cancel_url=f"{FRONTEND_BASE_URL}?billing=cancel",
-        allow_promotion_codes=True,
-    )
+        "subscription_data": subscription_data,
+        "success_url": f"{FRONTEND_BASE_URL}?billing=success",
+        "cancel_url": f"{FRONTEND_BASE_URL}?billing=cancel",
+        "allow_promotion_codes": True,
+    }
+    
+    is_location_test_email = email and "+location_" in email
+    
+    if is_location_test_email:
+        checkout_kwargs["customer_email"] = email
+    else:
+        customer_id = get_or_create_stripe_customer(user_id, email)
+        checkout_kwargs["customer"] = customer_id
+    
+    session = stripe.checkout.Session.create(**checkout_kwargs)
+
+
+
+##    customer_id = get_or_create_stripe_customer(user_id, email)
+##
+##    selected_price_id = STRIPE_PRICE_ID_PREMIUM if plan == "premium" else STRIPE_PRICE_ID_PRO
+##
+##
+##    subscription_data = {
+##        "metadata": {
+##            "user_id": user_id,
+##            "plan": plan,
+##        },
+##    }
+##
+##    if plan == "premium":
+##        already_used_trial = retained_identity_exists(email) if email else False
+##        if not already_used_trial:
+##            subscription_data["trial_period_days"] = 7
+##
+##    session = stripe.checkout.Session.create(
+##        mode="subscription",
+##        customer=customer_id,
+##        line_items=[
+##            {
+##                "price": selected_price_id,
+##                "quantity": 1,
+##            }
+##        ],
+##        subscription_data=subscription_data,
+##        success_url=f"{FRONTEND_BASE_URL}?billing=success",
+##        cancel_url=f"{FRONTEND_BASE_URL}?billing=cancel",
+##        allow_promotion_codes=True,
+##    )
+
+
+
 
     return {"url": session.url}
 
