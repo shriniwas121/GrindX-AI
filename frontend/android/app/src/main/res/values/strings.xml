@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Grindx AI</string>
+    <string name="title_activity_main">Grindx AI</string>
+    <string name="package_name">au.com.insightxai.grindxai</string>
+    <string name="custom_url_scheme">au.com.insightxai.grindxai</string>
+</resources>
