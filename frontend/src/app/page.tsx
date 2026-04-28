@@ -216,8 +216,17 @@ export default function Home() {
   >("profile");
 
 
+  const [profileName, setProfileName] = useState("");
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [profileMessage, setProfileMessage] = useState("");
+
 
   // RESTORE LIBRARY ON PAGE LOAD
+
+  useEffect(() => {
+    setProfileName(profile?.full_name || "");
+  }, [profile?.full_name]);
+
 
   useEffect(() => {
     const loadWorkspace = async () => {
@@ -252,6 +261,44 @@ export default function Home() {
     loadWorkspace();
   }, [user?.id]);
 
+
+
+  const handleSaveProfile = async () => {
+    if (!profileName.trim()) {
+      setProfileMessage("Name cannot be empty.");
+      return;
+    }
+  
+    setIsSavingProfile(true);
+    setProfileMessage("");
+  
+    try {
+      const {
+        data: { user: authUser },
+      } = await supabase.auth.getUser();
+  
+      if (!authUser) throw new Error("User not found.");
+  
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          full_name: profileName.trim(),
+        })
+        .eq("id", authUser.id);
+  
+      if (error) throw error;
+  
+      setProfile((prev: any) =>
+        prev ? { ...prev, full_name: profileName.trim() } : prev
+      );
+  
+      setProfileMessage("Profile updated successfully.");
+    } catch (err: any) {
+      setProfileMessage(err.message || "Could not update profile.");
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
 
 
   const handleGoogleSignIn = async () => {
@@ -3315,6 +3362,7 @@ export default function Home() {
                   </p>
                 </div>
       
+
                 {settingsSection === "profile" && (
                   <div className="space-y-5">
                     <div
@@ -3326,20 +3374,88 @@ export default function Home() {
                       <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                         Profile
                       </div>
-                      <div className="mt-4 space-y-3">
+                
+                      <div className="mt-4 space-y-4">
                         <div>
-                          <div className="text-sm font-semibold">
-                            {profile?.full_name || "User"}
-                          </div>
-                          <div className={cn("mt-1 text-sm", theme === "dark" ? "text-slate-300" : "text-slate-600")}>
+                          <label
+                            className={cn(
+                              "mb-2 block text-sm font-medium",
+                              theme === "dark" ? "text-slate-200" : "text-slate-700"
+                            )}
+                          >
+                            Full name
+                          </label>
+                          <input
+                            type="text"
+                            value={profileName}
+                            onChange={(e) => setProfileName(e.target.value)}
+                            placeholder="Enter your name"
+                            className={cn(
+                              "w-full rounded-xl border px-4 py-3 text-sm outline-none transition",
+                              theme === "dark"
+                                ? "border-slate-700 bg-slate-950 text-white placeholder:text-slate-500 focus:border-cyan-500"
+                                : "border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus:border-cyan-500"
+                            )}
+                          />
+                        </div>
+                
+                        <div>
+                          <label
+                            className={cn(
+                              "mb-2 block text-sm font-medium",
+                              theme === "dark" ? "text-slate-200" : "text-slate-700"
+                            )}
+                          >
+                            Email
+                          </label>
+                          <div
+                            className={cn(
+                              "rounded-xl border px-4 py-3 text-sm",
+                              theme === "dark"
+                                ? "border-slate-800 bg-slate-950 text-slate-300"
+                                : "border-slate-200 bg-slate-50 text-slate-600"
+                            )}
+                          >
                             {profile?.email || user?.email}
                           </div>
+                        </div>
+                
+                        {profileMessage && (
+                          <div
+                            className={cn(
+                              "rounded-xl border px-4 py-3 text-sm",
+                              profileMessage.toLowerCase().includes("success")
+                                ? theme === "dark"
+                                  ? "border-emerald-800 bg-emerald-950/40 text-emerald-300"
+                                  : "border-emerald-200 bg-emerald-50 text-emerald-700"
+                                : theme === "dark"
+                                ? "border-rose-800 bg-rose-950/40 text-rose-300"
+                                : "border-rose-200 bg-rose-50 text-rose-700"
+                            )}
+                          >
+                            {profileMessage}
+                          </div>
+                        )}
+                
+                        <div className="flex justify-end">
+                          <button
+                            type="button"
+                            onClick={handleSaveProfile}
+                            disabled={isSavingProfile}
+                            className={cn(
+                              "inline-flex items-center rounded-xl px-4 py-2.5 text-sm font-semibold transition",
+                              theme === "dark"
+                                ? "bg-cyan-500 text-slate-950 hover:bg-cyan-400 disabled:opacity-50"
+                                : "bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-50"
+                            )}
+                          >
+                            {isSavingProfile ? "Saving..." : "Save Changes"}
+                          </button>
                         </div>
                       </div>
                     </div>
                   </div>
                 )}
-      
                 
                 {settingsSection === "privacy" && (
                   <div className="space-y-5">
