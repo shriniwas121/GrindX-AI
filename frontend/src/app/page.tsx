@@ -3320,8 +3320,10 @@ export default function Home() {
                   { key: "privacy", label: "Privacy" },
                   { key: "plan", label: "Plan" },
                   { key: "subscription", label: "Subscription" },
+                  { key: "support", label: "Support" },
                   { key: "logout", label: "Log Out" },
                   { key: "delete", label: "Delete Account" },
+
                 ].map((item) => {
                   const active = settingsSection === item.key;
             
@@ -3330,7 +3332,7 @@ export default function Home() {
                       key={item.key}
                       onClick={() =>
                         setSettingsSection(
-                          item.key as "profile" | "privacy" | "plan" | "subscription" | "logout" | "delete"
+                          item.key as "profile" | "privacy" | "plan" | "subscription" | "support" | "logout" | "delete"
                         )
                       }
                       className={cn(
@@ -3653,6 +3655,64 @@ export default function Home() {
                   </div>
                 )}
       
+
+                {settingsSection === "support" && (
+                  <div className="space-y-5">
+                    <div
+                      className={cn(
+                        "rounded-2xl border p-5",
+                        theme === "dark" ? "border-slate-800 bg-slate-900" : "border-slate-200 bg-white"
+                      )}
+                    >
+                      <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        Support
+                      </div>
+                
+                      <div className="mt-4 flex items-start gap-3">
+                        <div
+                          className={cn(
+                            "mt-0.5 rounded-xl p-2",
+                            theme === "dark" ? "bg-slate-800 text-slate-200" : "bg-slate-100 text-slate-700"
+                          )}
+                        >
+                          <Mail className="h-5 w-5" />
+                        </div>
+                
+                        <div className="min-w-0 flex-1">
+                          <h3 className="text-base font-semibold text-slate-900 dark:text-white">
+                            Contact Support
+                          </h3>
+                
+                          <p
+                            className={cn(
+                              "mt-2 text-sm leading-7",
+                              theme === "dark" ? "text-slate-300" : "text-slate-600"
+                            )}
+                          >
+                            Need help with login, billing, uploads, mock tests, or any app issue?
+                            Email us and we’ll get back to you as soon as possible.
+                          </p>
+                
+                          <div className="mt-4">
+                            <a
+                              href="mailto:support@insightxai.com.au"
+                              className={cn(
+                                "inline-flex items-center justify-center rounded-xl px-4 py-2.5 text-sm font-medium transition",
+                                theme === "dark"
+                                  ? "bg-slate-800 text-white hover:bg-slate-700"
+                                  : "bg-slate-100 text-slate-900 hover:bg-slate-200"
+                              )}
+                            >
+                              support@insightxai.com.au
+                            </a>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+
                 {settingsSection === "logout" && (
                   <div className="space-y-4">
                     <div
