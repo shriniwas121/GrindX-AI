@@ -212,7 +212,7 @@ export default function Home() {
 
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [settingsSection, setSettingsSection] = useState<
-    "profile" | "privacy" | "plan" | "subscription" | "logout" | "delete"
+    "profile" | "privacy" | "plan" | "subscription" | "support" | "logout" | "delete"
   >("profile");
 
 
