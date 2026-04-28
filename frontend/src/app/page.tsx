@@ -842,16 +842,26 @@ export default function Home() {
     };
   
     loadSession();
-  
+
+
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
       if (!mounted) return;
-  
+    
+      if (event === "PASSWORD_RECOVERY") {
+        window.location.href =
+          window.location.hostname === "localhost"
+            ? "http://localhost:3000/update-password"
+            : "https://grindx.insightxai.com.au/update-password";
+        return;
+      }
+    
       syncAuthState(session).catch((err) => {
         console.error("Auth state sync failed:", err);
       });
     });
+  
   
     return () => {
       mounted = false;
