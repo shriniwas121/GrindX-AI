@@ -3037,7 +3037,7 @@ export default function Home() {
               <div className="flex flex-col rounded-2xl border border-slate-200 bg-slate-50/70 p-5">
                 <div className="mb-4">
                   <div className="text-sm font-semibold text-slate-500">Free</div>
-                  <div className="mt-2 text-2xl font-bold text-slate-900">A$0</div>
+                  <div className="mt-2 text-2xl font-bold text-slate-900">$0</div>
                   <div className="mt-1 text-sm text-slate-500">Good for getting started</div>
                 </div>
 
@@ -3080,7 +3080,7 @@ export default function Home() {
 
                 <div className="mb-4">
                   <div className="text-sm font-semibold text-emerald-600">Premium</div>
-                  <div className="mt-2 text-2xl font-bold text-slate-900">A$5.99</div>
+                  <div className="mt-2 text-2xl font-bold text-slate-900">$5.99</div>
                   <div className="mt-1 text-sm text-slate-500">per month</div>
                 </div>
 
@@ -3162,7 +3162,7 @@ export default function Home() {
               <div className="flex flex-col rounded-2xl border border-violet-200 bg-violet-50/40 p-5">
                 <div className="mb-4">
                   <div className="text-sm font-semibold text-violet-600">Pro</div>
-                  <div className="mt-2 text-2xl font-bold text-slate-900">A$14.99</div>
+                  <div className="mt-2 text-2xl font-bold text-slate-900">$14.99</div>
                   <div className="mt-1 text-sm text-slate-500">per month</div>
                 </div>
 
@@ -3228,7 +3228,7 @@ export default function Home() {
             <div className="border-t border-slate-200 bg-slate-50 px-6 py-0 text-center text-xs text-slate-500 md:px-8">
               <div className="border-t border-slate-200 bg-slate-50 px-1 py-1 text-center md:px-8">
                 <p className="mb-1 text-xs text-slate-500">
-                  Local currency may be shown at checkout where supported.
+                  Prices may be shown in your local currency at checkout where supported.
                 </p>
                 <p className="text-xs text-slate-500">
                   Cancel anytime. Paid plans stay active until the current billing period ends.
