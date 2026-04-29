@@ -1,5 +1,6 @@
 "use client";
 import { supabase } from "@/lib/supabase";
+import { Capacitor } from "@capacitor/core";
 import { useEffect, useState, useRef, useMemo } from "react";
 import ReactMarkdown from "react-markdown";
 import { WorkspaceShell } from "@/components/workspace/WorkspaceShell";
@@ -199,10 +200,16 @@ export default function Home() {
 
   const [audioLimitMessage, setAudioLimitMessage] = useState("");
   const [showBillingActions, setShowBillingActions] = useState(false);
+
+
   const [theme, setTheme] = useState<"light" | "dark">("light");
-
-
+  
+  const isIOSNative =
+    Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios";
+  
   const userLibraryKey = user?.id ? `grindx_library_${user.id}` : null;
+
+
   const userActiveIdKey = user?.id ? `grindx_active_id_${user.id}` : null;
 
   const urlInputRef = useRef<HTMLInputElement | null>(null);
@@ -3138,6 +3145,11 @@ export default function Home() {
                     >
                       Included Below Current Plan
                     </button>
+
+                  ) : isIOSNative ? (
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-center text-sm font-medium text-slate-500">
+                      Paid upgrades are not available in the iOS app yet. You can continue using the Free plan.
+                    </div>
                   ) : canShowTrialEntry ? (
                     <button
                       onClick={handleStartTrial}
@@ -3211,8 +3223,13 @@ export default function Home() {
                       )}
                     </div>
 
+                  ) : isIOSNative ? (
+                  
+                    <div className="rounded-xl border border-violet-200 bg-white px-4 py-3 text-center text-sm font-medium text-slate-500">
+                      Paid upgrades are not available in the iOS app yet. You can continue using the Free plan.
+                    </div>
                   ) : (
-
+                  
                     <button
                       onClick={handleUpgradeToPro}
                       disabled={isBillingLoading}
@@ -3221,6 +3238,7 @@ export default function Home() {
                       {isBillingLoading ? "Please wait..." : "Upgrade to Pro"}
                     </button>
                   )}
+
                 </div>
               </div>
             </div>
