@@ -4316,7 +4316,7 @@ export default function Home() {
                             handleUrlAnalyze(e.currentTarget.value);
                           }
                         }}
-                        placeholder="Paste YouTube, website URL or Screenshot."
+                        placeholder="Paste website URL or Screenshot."
                         className={cn(
                           "w-full rounded-3xl border-2 pl-12 pr-4 py-4 text-xl outline-none transition-colors",
                           theme === "dark"
