@@ -1266,15 +1266,14 @@ async def summarize(
     }
 
 
-
 from fastapi import Form
+
 @app.post("/summarize-video")
 async def summarize_video(
     video_url: str = Form(...),
     user_id: str = Form("")
 ):
     try:
-
         if user_id:
             allowed, message = check_upload_limit_in_supabase(user_id)
             if not allowed:
@@ -1282,16 +1281,35 @@ async def summarize_video(
                     "filename": video_url,
                     "summary": message,
                     "document_text": "",
+                    "error": False,
                 }
 
-
-        transcript_text = get_youtube_transcript(video_url)
-
-        if not transcript_text or transcript_text.strip() == "":
+        try:
+            transcript_text = get_youtube_transcript(video_url)
+        except Exception as transcript_error:
+            print("YOUTUBE TRANSCRIPT ERROR:", str(transcript_error))
             return {
                 "filename": video_url,
-                "summary": "No transcript could be extracted from this video.",
+                "summary": (
+                    "Transcript could not be retrieved for this YouTube video right now. "
+                    "This can happen if captions are unavailable, disabled, or YouTube is blocking transcript requests. "
+                    "Please try another video, try again later, or paste/upload notes manually."
+                ),
                 "document_text": "",
+                "error": True,
+                "error_code": "youtube_transcript_unavailable",
+            }
+
+        if not transcript_text or not transcript_text.strip():
+            return {
+                "filename": video_url,
+                "summary": (
+                    "No transcript could be extracted from this YouTube video. "
+                    "Please try another video or upload/paste study content manually."
+                ),
+                "document_text": "",
+                "error": True,
+                "error_code": "empty_transcript",
             }
 
         client = get_client()
@@ -1322,15 +1340,19 @@ async def summarize_video(
             "filename": video_url,
             "summary": summary,
             "document_text": transcript_text[:15000],
+            "error": False,
         }
 
     except Exception as e:
         print("VIDEO ERROR:", str(e))
         return {
             "filename": video_url,
-            "summary": f"Video analysis failed: {str(e)}",
+            "summary": "Video analysis failed right now. Please try again later or use another video.",
             "document_text": "",
+            "error": True,
+            "error_code": "video_analysis_failed",
         }
+
 
 
 from fastapi import Form
@@ -1341,7 +1363,6 @@ async def summarize_website(
     user_id: str = Form("")
 ):
     try:
-
         if user_id:
             allowed, message = check_upload_limit_in_supabase(user_id)
             if not allowed:
@@ -1349,10 +1370,19 @@ async def summarize_website(
                     "filename": website_url,
                     "summary": message,
                     "document_text": "",
+                    "error": False,
                 }
 
-
         website_text = get_website_text(website_url)
+
+        if not website_text or not website_text.strip():
+            return {
+                "filename": website_url,
+                "summary": "No readable content could be extracted from this website.",
+                "document_text": "",
+                "error": True,
+                "error_code": "empty_website_content",
+            }
 
         client = get_client()
         deployment_name = os.getenv("AZURE_OPENAI_DEPLOYMENT", "gpt-4o-mini")
@@ -1382,14 +1412,17 @@ async def summarize_website(
             "filename": website_url,
             "summary": summary,
             "document_text": website_text[:15000],
+            "error": False,
         }
 
     except Exception as e:
         print("WEBSITE ERROR:", str(e))
         return {
             "filename": website_url,
-            "summary": f"Website analysis failed: {str(e)}",
+            "summary": "Website analysis failed right now. Please try again later or use another website.",
             "document_text": "",
+            "error": True,
+            "error_code": "website_analysis_failed",
         }
 
 

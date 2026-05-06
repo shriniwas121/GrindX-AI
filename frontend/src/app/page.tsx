@@ -1386,7 +1386,6 @@ export default function Home() {
     }
   };
 
-
   const handleUrlAnalyze = async (incomingUrl?: string) => {
     try {
       if (!(await requireSignedIn())) return;
@@ -1408,8 +1407,6 @@ export default function Home() {
       const formData = new FormData();
       formData.append("user_id", user?.id || "");
       let endpoint = "";
-
-
       let type: LibraryItem["type"] = "WEB";
   
       if (finalUrl.includes("youtube.com") || finalUrl.includes("youtu.be")) {
@@ -1431,10 +1428,9 @@ export default function Home() {
         const errorText = await res.text();
         throw new Error(errorText);
       }
-
-
+  
       const data = await res.json();
-
+  
       if (
         typeof data?.summary === "string" &&
         data.summary.toLowerCase().includes("daily limit reached")
@@ -1442,13 +1438,26 @@ export default function Home() {
         handlePlanLimitReached(data.summary, "uploads");
         return;
       }
-
+  
+      if (data?.error || !data?.document_text?.trim()) {
+        alert(data?.summary || "Unable to analyze this URL right now.");
+        return;
+      }
+  
       const safeSummary =
-        data.summary || data.document_text || data.text || data.transcript || data.content || "No summary available";  
-
+        data.summary ||
+        data.document_text ||
+        data.text ||
+        data.transcript ||
+        data.content ||
+        "No summary available";
   
       const safeText =
-        data.document_text || data.text || data.transcript || data.content || "";
+        data.document_text ||
+        data.text ||
+        data.transcript ||
+        data.content ||
+        "";
   
       const newItem: LibraryItem = {
         id: crypto.randomUUID(),
@@ -1486,7 +1495,7 @@ export default function Home() {
       setTabLanguage("english");
       setUrlInput("");
       setShowSidebar(false);
-
+  
     } catch (err) {
       console.error(err);
       setSummary("URL analysis failed. Check backend terminal.");
@@ -1494,7 +1503,6 @@ export default function Home() {
       setIsUploading(false);
     }
   };
-
 
 
   const handlePasteAnalyze = async (inputText?: string) => {
