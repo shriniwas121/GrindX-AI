@@ -219,7 +219,7 @@ export default function Home() {
 
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [settingsSection, setSettingsSection] = useState<
-    "profile" | "privacy" | "plan" | "subscription" | "support" | "logout" | "delete"
+    "profile" | "privacy" | "plan" | "subscription" | "support" |  "rate" | "logout" | "delete"
   >("profile");
 
 
@@ -355,6 +355,14 @@ export default function Home() {
     setIsAsking(false);
   };
 
+  const handleRateApp = () => {
+    const playStoreUrl =
+      "https://play.google.com/store/apps/details?id=au.com.insightxai.grindxai";
+  
+    if (typeof window !== "undefined") {
+      window.open(playStoreUrl, "_blank", "noopener,noreferrer");
+    }
+  };
 
   const handleDownloadChat = () => {
     const activeItem = library.find((item) => item.id === activeId);
@@ -3347,6 +3355,7 @@ export default function Home() {
                   { key: "plan", label: "Plan" },
                   { key: "subscription", label: "Subscription" },
                   { key: "support", label: "Support" },
+                  { key: "rate", label: "Rate App" },
                   { key: "logout", label: "Log Out" },
                   { key: "delete", label: "Delete Account" },
 
@@ -3358,7 +3367,7 @@ export default function Home() {
                       key={item.key}
                       onClick={() =>
                         setSettingsSection(
-                          item.key as "profile" | "privacy" | "plan" | "subscription" | "support" | "logout" | "delete"
+                          item.key as "profile" | "privacy" | "plan" | "subscription" | "support" | "rate" | "logout" | "delete"
                         )
                       }
                       className={cn(
@@ -3731,6 +3740,65 @@ export default function Home() {
                             >
                               support@insightxai.com.au
                             </a>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+
+                {settingsSection === "rate" && (
+                  <div className="space-y-5">
+                    <div
+                      className={cn(
+                        "rounded-2xl border p-5",
+                        theme === "dark" ? "border-slate-800 bg-slate-900" : "border-slate-200 bg-white"
+                      )}
+                    >
+                      <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        Rate App
+                      </div>
+                
+                      <div className="mt-4 flex items-start gap-3">
+                        <div
+                          className={cn(
+                            "mt-0.5 rounded-xl p-2",
+                            theme === "dark" ? "bg-slate-800 text-slate-200" : "bg-slate-100 text-slate-700"
+                          )}
+                        >
+                          <Star className="h-5 w-5" />
+                        </div>
+                
+                        <div className="min-w-0 flex-1">
+                          <h3 className="text-base font-semibold text-slate-900 dark:text-white">
+                            Enjoying Grindx AI?
+                          </h3>
+                
+                          <p
+                            className={cn(
+                              "mt-2 text-sm leading-7",
+                              theme === "dark" ? "text-slate-300" : "text-slate-600"
+                            )}
+                          >
+                            If Grindx AI is helping you study smarter, please take a moment to
+                            rate the app on Google Play. Your feedback helps us improve and
+                            reach more students.
+                          </p>
+                
+                          <div className="mt-4">
+                            <button
+                              type="button"
+                              onClick={handleRateApp}
+                              className={cn(
+                                "inline-flex items-center justify-center rounded-xl px-4 py-2.5 text-sm font-medium transition",
+                                theme === "dark"
+                                  ? "bg-slate-800 text-white hover:bg-slate-700"
+                                  : "bg-slate-100 text-slate-900 hover:bg-slate-200"
+                              )}
+                            >
+                              Rate Grindx AI
+                            </button>
                           </div>
                         </div>
                       </div>
