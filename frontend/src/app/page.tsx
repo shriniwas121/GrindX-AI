@@ -3749,7 +3749,6 @@ export default function Home() {
                   </div>
                 )}
 
-
                 {settingsSection === "rate" && (
                   <div className="space-y-5">
                     <div
@@ -3783,20 +3782,19 @@ export default function Home() {
                               theme === "dark" ? "text-slate-300" : "text-slate-600"
                             )}
                           >
-                            If Grindx AI is helping you study smarter, please take a moment to
-                            rate the app on Google Play. Your feedback helps us improve and
-                            reach more students.
+                            If Grindx AI is helping you study smarter, ratings will be available
+                            once the app is live on Google Play.
                           </p>
                 
                           <div className="mt-4">
                             <button
                               type="button"
-                              onClick={handleRateApp}
+                              disabled
                               className={cn(
-                                "inline-flex items-center justify-center rounded-xl px-4 py-2.5 text-sm font-medium transition",
+                                "inline-flex items-center justify-center rounded-xl px-4 py-2.5 text-sm font-medium opacity-60 cursor-not-allowed",
                                 theme === "dark"
-                                  ? "bg-slate-800 text-white hover:bg-slate-700"
-                                  : "bg-slate-100 text-slate-900 hover:bg-slate-200"
+                                  ? "bg-slate-800 text-white"
+                                  : "bg-slate-100 text-slate-900"
                               )}
                             >
                               Rate Grindx AI
@@ -3807,7 +3805,6 @@ export default function Home() {
                     </div>
                   </div>
                 )}
-
 
                 {settingsSection === "logout" && (
                   <div className="space-y-4">
