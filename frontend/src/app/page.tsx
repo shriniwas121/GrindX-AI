@@ -48,7 +48,9 @@ import {
   Trash2,
   Settings,
   Shield,
+  Star
 } from "lucide-react";
+
 
 // Simple cn utility - combines class names
 function cn(...classes: (string | boolean | undefined | null)[]) {
