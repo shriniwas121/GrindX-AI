@@ -77,7 +77,7 @@ export default function AcademyPage() {
               What You Will Learn
             </h2>
 
-            <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="mt-6 grid gap-3 sm:grid-cols-2 font-bold lg:grid-cols-3">
               {[
                 "Azure account setup",
                 "GitHub Codespaces",
@@ -97,7 +97,7 @@ export default function AcademyPage() {
               ].map((item) => (
                 <div
                   key={item}
-                  className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-slate-800"
+                  className="rounded-3xl border border-slate-200 bg-slate-50 px-5 py-4 text-slate-800 shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md"
                 >
                   {item}
                 </div>
@@ -126,7 +126,7 @@ export default function AcademyPage() {
                 Who Should Join
               </h2>
           
-              <div className="mt-4 grid gap-4">
+              <div className="mt-4 grid font-bold gap-4">
                 {[
                   "IT professional / Developer",
                   "Career switchers",
@@ -137,7 +137,7 @@ export default function AcademyPage() {
                 ].map((item) => (
                   <div
                     key={item}
-                    className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-slate-800"
+                    className="rounded-3xl border border-slate-200 bg-slate-50 px-5 py-4 text-slate-800 shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md"
                   >
                     {item}
                   </div>
@@ -150,7 +150,7 @@ export default function AcademyPage() {
                 What You Need
               </h2>
           
-              <div className="mt-4 grid gap-4">
+              <div className="mt-4 font-bold grid gap-4">
                 {[
                   "Laptop",
                   "Internet browser",
@@ -161,7 +161,7 @@ export default function AcademyPage() {
                 ].map((item) => (
                   <div
                     key={item}
-                    className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-slate-800"
+                    className="rounded-3xl border border-slate-200 bg-slate-50 px-5 py-4 text-slate-800 shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md"
                   >
                     {item}
                   </div>
