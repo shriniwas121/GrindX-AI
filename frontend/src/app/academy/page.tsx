@@ -49,6 +49,10 @@ export default function AcademyPage() {
               <p className="mt-1 text-sm text-slate-600">
                 150 Sunset Views Boulevard, Tarneit VIC 3029
               </p>
+              <p className="mt-2 text-sm font-semibold text-slate-700">
+                Easy access: free on-site parking available with no time limits.
+              </p>
+
             </div>
 
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
@@ -124,7 +128,7 @@ export default function AcademyPage() {
           
               <div className="mt-4 grid gap-4">
                 {[
-                  "IT professionals",
+                  "IT professional / Developer",
                   "Career switchers",
                   "Data analysts and business analysts",
                   "Secondary school, college and university students",
@@ -199,11 +203,12 @@ export default function AcademyPage() {
             <h2 className="text-2xl font-bold tracking-tight">Trainer</h2>
 
             <p className="mt-4 max-w-4xl leading-7 text-slate-700">
-              Delivered by <strong>Shrinivas Dornal</strong>, Founder of InsightX
-              Data & AI Solutions. I built and deployed{" "}
-              <strong>GrindX AI</strong>, a live AI study application using
-              Azure AI and document-aware AI workflows.
+              Delivered by <strong>InsightX Data & AI Solutions</strong>. This training is
+              based on practical experience building and deploying{" "}
+              <strong>GrindX AI</strong>, a live AI study application using Azure AI and
+              document-aware AI workflows.
             </p>
+
 
             <p className="mt-3 max-w-4xl leading-7 text-slate-700">
               You can try uploading your own document and testing features such as 
@@ -270,8 +275,9 @@ export default function AcademyPage() {
           <div className="border-t border-slate-200 px-6 py-8 sm:px-10">
             <h2 className="text-2xl font-bold tracking-tight">Contact Us</h2>
 
+
             <p className="mt-4 max-w-4xl leading-7 text-slate-700">
-              Questions? Contact <strong>Shrinivas</strong> at{" "}
+              Questions? Contact us at{" "}
               <a
                 href="mailto:sdornal@insightxai.com.au"
                 className="font-semibold text-cyan-700 hover:text-cyan-900"
@@ -288,8 +294,6 @@ export default function AcademyPage() {
               .
             </p>
           </div>
-
-
 
         </section>
       </div>
