@@ -175,28 +175,26 @@ export default function AcademyPage() {
             </div>
           </div>
 
-
           <div className="border-t border-slate-200 px-6 py-8 sm:px-10">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-700">
-              Career Pathway
-            </p>
+            <h2 className="text-2xl font-bold tracking-tight">Career Pathway</h2>
 
-            <h2 className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
-              Course Outcome
-            </h2>
+            <div className="mt-4 rounded-3xl border border-cyan-200 bg-cyan-50 p-8 shadow-sm">
+              <p className="max-w-5xl text-lg font-semibold leading-9 text-slate-700">
+                This course helps you to build practical project experience for
+                future roles such as AI Developer, GenAI Application Support,
+                AI Automation Assistant, Azure AI project roles, and AI-enabled
+                business/data roles.
+              </p>
 
-            <div className="mt-4 grid gap-4">
-
-              <div className="rounded-3xl border border-cyan-200 bg-cyan-50 p-8 shadow-sm">
-  
-                <p className="mt-4 max-w-4xl text-lg leading-8 text-slate-700">
-                  This course is useful for learners who want to build practical
-                  skills for future roles such as AI Developer, GenAI Application
-                  Support, AI Automation Assistant, or Azure AI project roles.
-                </p>
-              </div>
+              <p className="mt-6 max-w-4xl text-lg font-semibold leading-7 text-slate-700">
+                Students can also use the completed labs and project work to
+                discuss practical AI skills in resumes, interviews, and job
+                applications.
+              </p>
             </div>
           </div>
+
+
 
 
           <div className="border-t border-slate-200 px-6 py-8 sm:px-10">
