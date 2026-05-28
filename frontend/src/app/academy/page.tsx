@@ -175,26 +175,43 @@ export default function AcademyPage() {
             </div>
           </div>
 
+
           <div className="border-t border-slate-200 px-6 py-8 sm:px-10">
             <h2 className="text-2xl font-bold tracking-tight">Career Pathway</h2>
 
-            <div className="mt-4 rounded-3xl border border-cyan-200 bg-cyan-50 p-8 shadow-sm">
-              <p className="max-w-5xl text-lg font-semibold leading-9 text-slate-700">
-                This course helps you to build practical project experience for
-                future roles such as AI Developer, GenAI Application Support,
-                AI Automation Assistant, Azure AI project roles, and AI-enabled
-                business/data roles.
-              </p>
+            <p className="mt-4 max-w-4xl text-lg leading-8 text-slate-700">
+              This course helps you build <strong>practical AI project experience</strong>{" "}
+              so you can stay stronger in your current <strong>IT/data role</strong>, adapt
+              during <strong>organisational change</strong>, and prepare for future roles
+              such as:
+            </p>
 
-              <p className="mt-6 max-w-4xl text-lg font-semibold leading-7 text-slate-700">
-                Students can also use the completed labs and project work to
-                discuss practical AI skills in resumes, interviews, and job
-                applications.
-              </p>
+            <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {[
+                "AI Developer",
+                "GenAI Application Support",
+                "AI Automation Assistant",
+                "Azure AI Project Roles",
+                "AI-enabled Business Roles",
+                "AI-enabled Data Roles",
+              ].map((item) => (
+                <div
+                  key={item}
+                  className="rounded-3xl border border-slate-200 bg-slate-50 px-5 py-4 font-semibold text-slate-800 shadow-sm transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md"
+                >
+                  {item}
+                </div>
+              ))}
             </div>
+
+            <p className="mt-5 max-w-4xl text-base leading-7 text-slate-700">
+              For students, the completed labs and project work can help demonstrate{" "}
+              <strong>practical AI skills</strong> when applying for{" "}
+              <strong>internships</strong>, <strong>part-time technology roles</strong>,{" "}
+              <strong>graduate roles</strong>, and future job opportunities.
+            </p>
+
           </div>
-
-
 
 
           <div className="border-t border-slate-200 px-6 py-8 sm:px-10">
