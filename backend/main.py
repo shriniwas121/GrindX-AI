@@ -956,41 +956,6 @@ async def create_checkout_session(request: Request):
 
 
 
-##    customer_id = get_or_create_stripe_customer(user_id, email)
-##
-##    selected_price_id = STRIPE_PRICE_ID_PREMIUM if plan == "premium" else STRIPE_PRICE_ID_PRO
-##
-##
-##    subscription_data = {
-##        "metadata": {
-##            "user_id": user_id,
-##            "plan": plan,
-##        },
-##    }
-##
-##    if plan == "premium":
-##        already_used_trial = retained_identity_exists(email) if email else False
-##        if not already_used_trial:
-##            subscription_data["trial_period_days"] = 7
-##
-##    session = stripe.checkout.Session.create(
-##        mode="subscription",
-##        customer=customer_id,
-##        line_items=[
-##            {
-##                "price": selected_price_id,
-##                "quantity": 1,
-##            }
-##        ],
-##        subscription_data=subscription_data,
-##        success_url=f"{FRONTEND_BASE_URL}?billing=success",
-##        cancel_url=f"{FRONTEND_BASE_URL}?billing=cancel",
-##        allow_promotion_codes=True,
-##    )
-
-
-
-
     return {"url": session.url}
 
 
@@ -1467,7 +1432,7 @@ def get_top_chunks(document_text: str, question_embedding, top_k: int = 3):
 
     scored.sort(key=lambda x: x[0], reverse=True)
 
-    # ✅ RETURN WITH SCORES
+    # RETURN WITH SCORES
     return scored[:top_k]
 
 
@@ -1569,10 +1534,10 @@ async def translate_and_speak(
     language: str = Form(...)
 ):
     try:
-        # ✅ CLEAN FIRST (IMPORTANT)
+        # CLEAN FIRST (IMPORTANT)
         text = clean_text_for_speech(text)
 
-        # 🌍 LANGUAGE MAP
+        # LANGUAGE MAP
         lang_map = {
             "english": "en",
             "hindi": "hi",
@@ -1587,7 +1552,7 @@ async def translate_and_speak(
 
         target_lang = lang_map.get(language.lower(), "en")
         
-        # ✅ FORCE SAFE LANG FOR SPEECH
+        # FORCE SAFE LANG FOR SPEECH
         speech_lang = target_lang
         
         if target_lang in ["gu", "pa"]:
@@ -1603,7 +1568,7 @@ async def translate_and_speak(
         print("TRANSLATED:", translated_text[:100])
 
 
-        # 🔹 TRANSLATE IF NOT ENGLISH
+        # TRANSLATE IF NOT ENGLISH
         if target_lang != "en":
             endpoint = os.getenv("AZURE_TRANSLATOR_ENDPOINT")
             key = os.getenv("AZURE_TRANSLATOR_KEY")
@@ -1614,7 +1579,7 @@ async def translate_and_speak(
 
             headers = {
                 "Ocp-Apim-Subscription-Key": key,
-                "Ocp-Apim-Subscription-Region": "australiaeast",   # ✅ ADD THIS
+                "Ocp-Apim-Subscription-Region": "australiaeast",   #  ADD THIS
                 "Content-Type": "application/json"
             }
             
@@ -1631,13 +1596,13 @@ async def translate_and_speak(
             translated_text = response.json()[0]["translations"][0]["text"]
 
 
-        # 🔊 SPEECH CONFIG
+        # SPEECH CONFIG
         speech_config = speechsdk.SpeechConfig(
             subscription=os.getenv("AZURE_SPEECH_KEY"),
             region=os.getenv("AZURE_SPEECH_REGION"),
         )
 
-        # 🔥 VOICE MAPPING (THIS FIXES "Speech failed")
+        #  VOICE MAPPING (THIS FIXES "Speech failed")
         voice_map = {
             "en": "en-US-AriaNeural",
             "hi": "hi-IN-SwaraNeural",
@@ -2095,7 +2060,7 @@ async def vision_analyze(file: UploadFile = File(...)):
     try:
         file_bytes = await file.read()
 
-        # 🔒 IMAGE SIZE PROTECTION (5MB)
+        # IMAGE SIZE PROTECTION (5MB)
         MAX_SIZE = 5 * 1024 * 1024
         if len(file_bytes) > MAX_SIZE:
             raise HTTPException(
@@ -2215,7 +2180,7 @@ async def ask(
     user_id: str = Form("")
 ):
 
-    # 🔐 SECURITY CHECK (ADD THIS HERE)
+    #  SECURITY CHECK (ADD THIS HERE)
     if request.headers.get("x-api-key") != os.getenv("APP_API_KEY"):
         raise HTTPException(status_code=401, detail="Unauthorized")
 
@@ -2229,7 +2194,7 @@ async def ask(
             }
 
 
-    # ✅ CASUAL CHAT (PUT EXACTLY HERE)
+    #  CASUAL CHAT (PUT EXACTLY HERE)
     simple_phrases = ["thanks", "thank you", "ok", "cool", "great", "nice", "got it"]
     
     if question.strip().lower() in simple_phrases:
@@ -2243,7 +2208,7 @@ async def ask(
         }
 
 
-    # 🛑 INPUT LIMIT (ADD HERE)
+    #  INPUT LIMIT (ADD HERE)
     if len(question) > 500:
         raise HTTPException(status_code=400, detail="Question too long")
 
@@ -2276,12 +2241,12 @@ async def ask(
     print("BACKEND KEY:", os.getenv("APP_API_KEY"))
 
 
-    # 🔥 STEP 1: Check if question is related to document
+    #  STEP 1: Check if question is related to document
     doc_relevance_score, question_embedding = is_question_related_to_document(question, document_text)
     
     print("DOC RELEVANCE:", doc_relevance_score)
     
-    # ❌ If NOT related → STOP
+    #  If NOT related → STOP
     if doc_relevance_score < 0.05:
         return {
             "answer": "This question is not related to the uploaded document. Please ask something relevant to the document.",
@@ -2418,7 +2383,7 @@ async def ask(
 
     answer = response.choices[0].message.content or "No answer returned."
 
-    # ❌ REMOVE THIS LINE (IMPORTANT)
+    #  REMOVE THIS LINE (IMPORTANT)
     # source_type = "document" if relevant_context else "external"
 
     print("----- REQUEST -----")

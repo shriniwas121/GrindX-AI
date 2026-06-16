@@ -3782,8 +3782,8 @@ export default function Home() {
                               theme === "dark" ? "text-slate-300" : "text-slate-600"
                             )}
                           >
-                            If Grindx AI is helping you study smarter, ratings will be available
-                            once the app is live on Google Play.
+                            Thanks for using Grindx AI. You’ll be able to rate the app
+                            once it is publicly available on Google Play.
                           </p>
                 
                           <div className="mt-4">
