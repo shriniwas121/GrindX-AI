@@ -15,23 +15,21 @@ The goal of the project is to demonstrate practical AI engineering: building a c
 ```mermaid
 flowchart TD
     A[1. User visits GrindX AI] --> B[2. Frontend Web App]
-    B --> C[3. Login / Navigation]
-    C --> D[4. User selects action]
+    B --> C[3. User selects action]
 
-    D --> E[5. Upload document or image]
-    D --> F[6. Paste URL or text]
-    D --> G[7. Ask chat question]
+    C --> D[4. Upload document/image]
+    C --> E[5. Paste URL/text]
+    C --> F[6. Ask chat question]
 
-    E --> H[8. Backend API receives request]
-    F --> H
-    G --> H
+    D --> G[7. Backend API receives request]
+    E --> G
+    F --> G
 
-    H --> I[9. Authentication and usage checks]
-    I --> J[10. Extract and prepare content]
-    J --> K[11. Build prompt and context]
-    K --> L[12. Call AI model / LLM API]
-    L --> M[13. Return response to frontend]
-    M --> N[14. Display answer, summary, concepts or mock test]
+    G --> H[8. Validate request and usage]
+    H --> I[9. Extract and prepare content]
+    I --> J[10. Build prompt and context]
+    J --> K[11. Backend calls AI model / LLM API]
+    K --> L[12. Format response and display result]
 ```
 
 ---
@@ -40,17 +38,17 @@ flowchart TD
 
 The frontend handles the user-facing experience:
 
-- Login and navigation
-- File upload interface
-- AI chat interface
-- URL input and analysis flow
-- Prompt/action buttons
-- Loading states
-- Error messages
-- Displaying AI responses
-- Public information pages such as privacy, terms and academy pages
+* Login and navigation
+* File upload interface
+* AI chat interface
+* URL input and analysis flow
+* Prompt/action buttons
+* Loading states
+* Error messages
+* Displaying AI responses
+* Public information pages such as privacy, terms and academy pages
 
-The frontend does not store AI secrets or API keys. It sends user requests to the backend API.
+The frontend does not store AI secrets or API keys. It sends user requests to the backend API. Secrets and configuration are handled server-side through environment variables in the hosting platform.
 
 ---
 
@@ -58,17 +56,17 @@ The frontend does not store AI secrets or API keys. It sends user requests to th
 
 The backend handles the main AI and business logic:
 
-- Receiving frontend requests
-- Validating user input
-- Authentication and usage checks
-- File/document processing
-- OCR or image-related processing
-- URL content processing
-- Prompt workflow handling
-- Preparing context for the AI model
-- Calling the AI model/API
-- Handling errors and responses
-- Returning structured output to the frontend
+* Receiving frontend requests
+* Validating user input
+* Authentication and usage checks
+* File/document processing
+* OCR or image-related processing
+* URL content processing
+* Prompt workflow handling
+* Preparing context for the AI model
+* Calling the AI model/API
+* Handling errors and responses
+* Returning structured output to the frontend
 
 The backend controls the main AI workflow.
 
@@ -156,17 +154,17 @@ RAG helps reduce hallucination because the model answers using retrieved content
 
 ## 8. Azure Services Mapping
 
-| Requirement | Azure Service |
-|---|---|
-| LLM / chat / summaries | Azure OpenAI |
-| AI project/model management | Azure AI Foundry |
-| Document extraction | Azure AI Document Intelligence |
-| Image/OCR scenarios | Azure AI Vision / Document Intelligence |
-| RAG search/index | Azure AI Search |
-| Secure secrets | Azure Key Vault |
-| File storage | Azure Storage |
-| App/API hosting | Azure App Service / Container Apps / Functions |
-| Monitoring | Application Insights |
+| Requirement                 | Azure Service                                  |
+| --------------------------- | ---------------------------------------------- |
+| LLM / chat / summaries      | Azure OpenAI                                   |
+| AI project/model management | Azure AI Foundry                               |
+| Document extraction         | Azure AI Document Intelligence                 |
+| Image/OCR scenarios         | Azure AI Vision / Document Intelligence        |
+| RAG search/index            | Azure AI Search                                |
+| Secure secrets              | Azure Key Vault                                |
+| File storage                | Azure Storage                                  |
+| App/API hosting             | Azure App Service / Container Apps / Functions |
+| Monitoring                  | Application Insights                           |
 
 ---
 
@@ -174,22 +172,22 @@ RAG helps reduce hallucination because the model answers using retrieved content
 
 GrindX AI uses a pro-code approach for the main application because it requires:
 
-- Custom authentication
-- Document upload handling
-- OCR/image input
-- URL analysis
-- Prompt workflows
-- Usage controls
-- Backend AI logic
-- Custom user experience
+* Custom authentication
+* Document upload handling
+* OCR/image input
+* URL analysis
+* Prompt workflows
+* Usage controls
+* Backend AI logic
+* Custom user experience
 
 A low-code option such as Copilot Studio is better suited for simpler use cases such as:
 
-- Pre-login help assistant
-- FAQ support
-- User onboarding
-- Teams/internal assistant
-- Simple workflow automation
+* Pre-login help assistant
+* FAQ support
+* User onboarding
+* Teams/internal assistant
+* Simple workflow automation
 
 For example, a GrindX AI Help Assistant can be created with Copilot Studio to answer new-user questions from public website content.
 
@@ -199,15 +197,15 @@ For example, a GrindX AI Help Assistant can be created with Copilot Studio to an
 
 Important production considerations include:
 
-- Do not expose API keys in frontend code
-- Store secrets in environment variables or Azure Key Vault
-- Use authentication and authorization
-- Ensure users only access their own data
-- Add usage limits and rate limits
-- Monitor token/API usage
-- Add Azure budget alerts
-- Log errors without exposing sensitive data
-- Avoid sending unnecessary private data to AI models
+* Do not expose API keys in frontend code
+* Store secrets in environment variables or Azure Key Vault
+* Use authentication and authorization
+* Ensure users only access their own data
+* Add usage limits and rate limits
+* Monitor token/API usage
+* Add Azure budget alerts
+* Log errors without exposing sensitive data
+* Avoid sending unnecessary private data to AI models
 
 ---
 
@@ -215,16 +213,16 @@ Important production considerations include:
 
 A production-style AI application needs:
 
-- Good user experience
-- Backend workflow control
-- Secure configuration
-- Error handling
-- Usage monitoring
-- Cost control
-- Response reliability
-- Clear fallback behaviour
-- Safe handling of user content
-- Deployment and monitoring process
+* Good user experience
+* Backend workflow control
+* Secure configuration
+* Error handling
+* Usage monitoring
+* Cost control
+* Response reliability
+* Clear fallback behaviour
+* Safe handling of user content
+* Deployment and monitoring process
 
 The main learning from GrindX AI is that a real AI application is more than an LLM call. The value is in the full workflow around the model.
 
@@ -234,16 +232,16 @@ The main learning from GrindX AI is that a real AI application is more than an L
 
 GrindX AI demonstrates practical AI application development across:
 
-- Full-stack web application structure
-- Frontend/backend integration
-- AI model/API integration
-- Document-aware AI workflows
-- OCR/image input concepts
-- URL analysis
-- Prompt workflows
-- Usage controls
-- Authentication-aware design
-- Azure AI direction
-- Low-code vs pro-code decision making
+* Full-stack web application structure
+* Frontend/backend integration
+* AI model/API integration
+* Document-aware AI workflows
+* OCR/image input concepts
+* URL analysis
+* Prompt workflows
+* Usage controls
+* Authentication-aware design
+* Azure AI direction
+* Low-code vs pro-code decision making
 
 The project shows practical AI engineering focused on building usable AI products, not only experimenting with AI models.
