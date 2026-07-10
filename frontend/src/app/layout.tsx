@@ -13,7 +13,7 @@ const mono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AI Tutor",
+  title: "GrindX AI",
   description: "AI-powered learning assistant",
 };
 
