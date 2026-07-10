@@ -31,19 +31,28 @@ except Exception:
 load_dotenv()
 
 
+
 app = FastAPI(title="GrindX AI Backend")
 
+raw_origins = os.getenv(
+    "CORS_ORIGINS",
+    "http://localhost:3000,https://grindx.insightxai.com.au,https://polite-sea-0a5a22600.7.azurestaticapps.net"
+)
+
+allowed_origins = [
+    origin.strip().rstrip("/")
+    for origin in raw_origins.split(",")
+    if origin.strip()
+]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "https://grindx.insightxai.com.au",
-    ],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")
