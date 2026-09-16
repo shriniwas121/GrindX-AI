@@ -1,0 +1,40 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+
+trigger:
+- main
+
+pool:
+  vmImage: ubuntu-latest
+
+steps:
+- task: UsePythonVersion@0
+  inputs:
+    versionSpec: '3.12'
+  displayName: 'Use Python 3.12'
+
+- script: |
+    python -m pip install --upgrade pip
+    pip install -r backend/requirements.txt
+  displayName: 'Install backend dependencies'
+
+- script: |
+    python -m py_compile backend/main.py
+  displayName: 'Validate FastAPI backend'
+
+- task: ArchiveFiles@2
+  inputs:
+    rootFolderOrFile: 'backend'
+    includeRootFolder: false
+    archiveType: 'zip'
+    archiveFile: '$(Build.ArtifactStagingDirectory)/grindx-backend.zip'
+    replaceExistingArchive: true
+  displayName: 'Package backend'
+
+- task: PublishPipelineArtifact@1
+  inputs:
+    targetPath: '$(Build.ArtifactStagingDirectory)/grindx-backend.zip'
+    artifact: 'grindx-backend'
+  displayName: 'Publish backend artifact'
