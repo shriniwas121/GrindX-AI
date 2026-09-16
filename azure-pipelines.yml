@@ -1,4 +1,5 @@
 # Starter pipeline
+
 # Start with a minimal pipeline that you can customize to build and deploy your code.
 # Add steps that build, run tests, deploy, and more:
 # https://aka.ms/yaml
@@ -38,3 +39,13 @@ steps:
     targetPath: '$(Build.ArtifactStagingDirectory)/grindx-backend.zip'
     artifact: 'grindx-backend'
   displayName: 'Publish backend artifact'
+
+- task: AzureRmWebAppDeployment@5
+  inputs:
+    ConnectionType: 'AzureRM'
+    azureSubscription: 'GrindX-Azure-RM'
+    appType: 'webAppLinux'
+    WebAppName: 'grindxai-backend'
+    packageForLinux: '$(Build.ArtifactStagingDirectory)/grindx-backend.zip'
+    RuntimeStack: 'PYTHON|3.12'
+    DeploymentTypeLinux: 'oneDeploy'
