@@ -138,7 +138,7 @@ def get_daily_limit_for_tier(tier: str) -> int:
     if tier == "premium":
         return 15
     if tier == "pro":
-        return 70
+        return 50
     return 5
 
 
