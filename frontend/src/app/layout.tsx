@@ -1,3 +1,4 @@
+import EntraMsalProvider from "./msal-provider";
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
@@ -17,17 +18,20 @@ export const metadata: Metadata = {
   description: "AI-powered learning assistant",
 };
 
+
 export default function RootLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode;
-}) {
+}>) {
   return (
     <html lang="en">
       <body
         className={`${inter.variable} ${mono.variable} antialiased overflow-x-hidden`}
       >
-        {children}
+        <EntraMsalProvider>
+          {children}
+        </EntraMsalProvider>
       </body>
     </html>
   );
