@@ -22,6 +22,7 @@ from docx import Document
 from datetime import datetime, timezone
 import stripe
 from typing import Optional
+import uuid
 
 try:
     from pypdf import PdfReader
@@ -1171,6 +1172,71 @@ def root():
     return {"message": "GrindX AI backend is running"}
 
 
+
+def notify_azure_document_processing(
+    document_name: str,
+    file_size: int,
+    tier: str
+):
+    if os.getenv("AZURE_INTEGRATION_ENABLED", "false").lower() != "true":
+        print("AZURE INTEGRATION: disabled")
+        return
+
+    try:
+        tenant_id = os.getenv("AZURE_INTEGRATION_TENANT_ID")
+        client_id = os.getenv("AZURE_INTEGRATION_CLIENT_ID")
+        client_secret = os.getenv("AZURE_INTEGRATION_CLIENT_SECRET")
+        api_app_id = os.getenv("AZURE_INTEGRATION_API_APP_ID")
+        apim_url = os.getenv("AZURE_INTEGRATION_APIM_URL")
+        apim_key = os.getenv("AZURE_INTEGRATION_APIM_KEY")
+
+        token_response = requests.post(
+            f"https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token",
+            data={
+                "client_id": client_id,
+                "client_secret": client_secret,
+                "scope": f"api://{api_app_id}/.default",
+                "grant_type": "client_credentials",
+            },
+            timeout=10,
+        )
+
+        token_response.raise_for_status()
+        access_token = token_response.json()["access_token"]
+
+        request_id = f"gx-{uuid.uuid4()}"
+
+        payload = {
+            "requestId": request_id,
+            "source": "grindx",
+            "eventType": "DOCUMENT_UPLOADED",
+            "tier": tier,
+            "documentName": document_name,
+            "fileSize": file_size,
+        }
+
+        response = requests.post(
+            apim_url,
+            headers={
+                "Authorization": f"Bearer {access_token}",
+                "Ocp-Apim-Subscription-Key": apim_key,
+                "Content-Type": "application/json",
+            },
+            json=payload,
+            timeout=15,
+        )
+
+        print(
+            "AZURE INTEGRATION:",
+            response.status_code,
+            response.text
+        )
+
+    except Exception as e:
+        # Important: Azure failure must not break normal GrindX upload
+        print("AZURE INTEGRATION FAILED:", str(e))
+
+
 @app.post("/summarize")
 async def summarize(
     file: UploadFile = File(...),
@@ -1187,10 +1253,22 @@ async def summarize(
             }
 
 
-    file_bytes = await file.read()
+#    file_bytes = await file.read()
+#
+#    tier = get_profile_tier(user_id) if user_id else "free"
+#    max_size = get_max_document_size_for_tier(tier)
 
+    file_bytes = await file.read()
+    
     tier = get_profile_tier(user_id) if user_id else "free"
     max_size = get_max_document_size_for_tier(tier)
+    
+    notify_azure_document_processing(
+        document_name=file.filename,
+        file_size=len(file_bytes),
+        tier=tier,
+    )
+
 
     if len(file_bytes) > max_size:
         return {
