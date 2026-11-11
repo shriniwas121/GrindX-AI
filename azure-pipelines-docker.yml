@@ -8,15 +8,12 @@ steps:
 - checkout: self
 
 - task: Docker@2
-  displayName: 'Build GrindX backend image'
+  displayName: 'Build and push GrindX backend to ACR'
   inputs:
-    command: 'build'
+    command: 'buildAndPush'
+    containerRegistry: 'GrindX-ACR-Connection'
     repository: 'grindx-backend'
     Dockerfile: '$(Build.SourcesDirectory)/backend/Dockerfile'
     buildContext: '$(Build.SourcesDirectory)/backend'
     tags: |
       $(Build.BuildId)
-
-- script: |
-    docker image inspect grindx-backend:$(Build.BuildId)
-  displayName: 'Verify Docker image'
