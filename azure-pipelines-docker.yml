@@ -1,7 +1,4 @@
-trigger:
-  branches:
-    include:
-      - feature/docker-aks
+trigger: none
 
 pr: none
 
