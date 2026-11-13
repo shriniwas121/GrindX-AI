@@ -1,30 +1,20 @@
-trigger:
-  - main
+trigger: none
 
-pool: 
+pr: none
+
+pool:
   vmImage: 'ubuntu-latest'
 
 steps:
-- script: echo "Hello world"
-  displayName: "My first pipeline"
+- checkout: self
 
-# trigger: none
-# 
-# pr: none
-# 
-# pool:
-#   vmImage: 'ubuntu-latest'
-# 
-# steps:
-# - checkout: self
-# 
-# - task: Docker@2
-#   displayName: 'Build and push GrindX backend to ACR'
-#   inputs:
-#     command: 'buildAndPush'
-#     containerRegistry: 'GrindX-ACR-Connection'
-#     repository: 'grindx-backend'
-#     Dockerfile: '$(Build.SourcesDirectory)/backend/Dockerfile'
-#     buildContext: '$(Build.SourcesDirectory)/backend'
-#     tags: |
-#       $(Build.BuildId)
+- task: Docker@2
+  displayName: 'Build and push GrindX backend to ACR'
+  inputs:
+    command: 'buildAndPush'
+    containerRegistry: 'GrindX-ACR-Connection'
+    repository: 'grindx-backend'
+    Dockerfile: '$(Build.SourcesDirectory)/backend/Dockerfile'
+    buildContext: '$(Build.SourcesDirectory)/backend'
+    tags: |
+      $(Build.BuildId)
